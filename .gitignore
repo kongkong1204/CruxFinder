@@ -34,5 +34,11 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Claude Code
+node_modules/
+.env
+
+/src/generated/prisma
+
+
+claude.log
 .claude/

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>마이페이지</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: sans-serif; max-width: 480px; margin: 60px auto; padding: 0 20px; background: #f9f9f9; }
+    h1 { font-size: 1.6rem; margin-bottom: 4px; }
+    .subtitle { color: #888; font-size: 0.9rem; margin-bottom: 32px; }
+    .card { background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 24px; margin-bottom: 24px; }
+    .card h2 { font-size: 1rem; margin: 0 0 16px; color: #333; }
+    .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.95rem; }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: #888; }
+    label { display: block; margin-bottom: 4px; font-size: 0.88rem; color: #555; margin-top: 12px; }
+    label:first-of-type { margin-top: 0; }
+    input { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; }
+    button { width: 100%; padding: 10px; margin-top: 14px; background: #333; color: #fff; border: none; border-radius: 4px; font-size: 0.95rem; cursor: pointer; }
+    button:hover { opacity: 0.8; }
+    .msg { margin-top: 10px; font-size: 0.88rem; text-align: center; }
+    .msg.ok { color: green; }
+    .msg.err { color: red; }
+    .nav { margin-bottom: 20px; }
+    .nav a { font-size: 0.88rem; color: #555; text-decoration: none; }
+    .nav a:hover { text-decoration: underline; }
+    .logout-btn { width: 100%; padding: 10px; background: #fff; color: #888; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; cursor: pointer; margin-top: 8px; }
+    .logout-btn:hover { background: #f5f5f5; }
+  </style>
+</head>
+<body>
+  <div class="nav"><a href="/index.html">← 홈으로</a></div>
+  <h1>마이페이지</h1>
+  <p class="subtitle">내 계정 정보를 확인하고 수정할 수 있습니다.</p>
+
+  <!-- 내 정보 카드 -->
+  <div class="card">
+    <h2>내 정보</h2>
+    <div class="info-row"><span class="info-label">이름</span><span id="infoName">-</span></div>
+    <div class="info-row"><span class="info-label">이메일</span><span id="infoEmail">-</span></div>
+  </div>
+
+  <!-- STEP 1: 비밀번호 확인 -->
+  <div class="card" id="stepVerify">
+    <h2>본인 확인</h2>
+    <label for="currentPw">현재 비밀번호</label>
+    <input type="password" id="currentPw" placeholder="현재 비밀번호 입력">
+    <button id="verifyBtn">확인</button>
+    <div class="msg" id="verifyMsg"></div>
+  </div>
+
+  <!-- STEP 2: 정보 수정 (확인 성공 후 표시) -->
+  <div class="card" id="stepEdit" style="display:none">
+    <h2>정보 수정</h2>
+
+    <label for="newEmail">새 이메일 (변경 시 입력)</label>
+    <input type="email" id="newEmail" placeholder="새 이메일 주소">
+
+    <label for="newPw">새 비밀번호 (변경 시 입력)</label>
+    <input type="password" id="newPw" placeholder="영문+숫자 포함">
+
+    <button id="saveBtn">저장</button>
+    <div class="msg" id="editMsg"></div>
+  </div>
+
+  <button class="logout-btn" id="logoutBtn">로그아웃</button>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = '/login.html';
+    }
+
+    const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+
+    async function loadMe() {
+      try {
+        const res = await fetch('/users/me', { headers });
+        if (res.status === 401) { window.location.href = '/login.html'; return; }
+        const data = await res.json();
+        document.getElementById('infoName').textContent = data.name || '-';
+        document.getElementById('infoEmail').textContent = data.email;
+      } catch {}
+    }
+    loadMe();
+
+    document.getElementById('verifyBtn').addEventListener('click', async () => {
+      const password = document.getElementById('currentPw').value;
+      const msgEl = document.getElementById('verifyMsg');
+      msgEl.textContent = '';
+
+      if (!password) {
+        msgEl.className = 'msg err';
+        msgEl.textContent = '비밀번호를 입력해주세요.';
+        return;
+      }
+
+      const res = await fetch('/users/verify-password', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ password }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        msgEl.className = 'msg err';
+        msgEl.textContent = data.message;
+        return;
+      }
+
+      // 확인 통과 → 편집 폼으로
+      document.getElementById('stepVerify').style.display = 'none';
+      document.getElementById('stepEdit').style.display = 'block';
+    });
+
+    document.getElementById('saveBtn').addEventListener('click', async () => {
+      const newEmail = document.getElementById('newEmail').value.trim();
+      const newPassword = document.getElementById('newPw').value;
+      const msgEl = document.getElementById('editMsg');
+      msgEl.textContent = '';
+
+      if (!newEmail && !newPassword) {
+        msgEl.className = 'msg err';
+        msgEl.textContent = '수정할 항목(이메일 또는 비밀번호)을 입력해주세요.';
+        return;
+      }
+
+      const body = {};
+      if (newEmail) body.email = newEmail;
+      if (newPassword) body.newPassword = newPassword;
+
+      const res = await fetch('/users/me', {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        msgEl.className = 'msg err';
+        msgEl.textContent = data.message;
+        return;
+      }
+
+      msgEl.className = 'msg ok';
+      msgEl.textContent = '수정 완료!';
+      document.getElementById('infoEmail').textContent = data.email;
+      document.getElementById('newEmail').value = '';
+      document.getElementById('newPw').value = '';
+
+      if (newEmail) {
+        setTimeout(() => {
+          alert('이메일이 변경되었습니다. 다시 로그인해주세요.');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/login.html';
+        }, 800);
+      }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login.html';
+    });
+  </script>
+</body>
+</html>

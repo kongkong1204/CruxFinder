@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Crux Finder</title>
+  <style>
+    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f9f9f9; }
+    h1 { font-size: 2rem; margin-bottom: 8px; }
+    p { color: #888; margin-bottom: 40px; }
+    .buttons { display: flex; gap: 12px; }
+    a { padding: 12px 32px; border-radius: 6px; text-decoration: none; font-size: 1rem; font-weight: bold; }
+    .primary { background: #333; color: #fff; }
+    .secondary { background: #fff; color: #333; border: 1px solid #ccc; }
+    a:hover { opacity: 0.8; }
+  </style>
+</head>
+<body>
+  <h1>Crux Finder</h1>
+  <p id="desc">서비스를 이용하려면 로그인하거나 회원가입 해주세요.</p>
+  <div class="buttons">
+    <a href="/login.html" class="primary" id="loginBtn">로그인</a>
+    <a href="/signup.html" class="secondary" id="signupBtn">회원가입</a>
+    <a href="/mypage" class="secondary" id="mypageBtn" style="display:none">마이페이지</a>
+    <a href="#" class="secondary" id="logoutBtn" style="display:none">로그아웃</a>
+  </div>
+
+  <script>
+    if (localStorage.getItem('token')) {
+      document.getElementById('desc').textContent = '환영합니다!';
+      document.getElementById('loginBtn').style.display = 'none';
+      document.getElementById('signupBtn').style.display = 'none';
+      document.getElementById('mypageBtn').style.display = '';
+      document.getElementById('logoutBtn').style.display = '';
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.reload();
+    });
+  </script>
+</body>
+</html>

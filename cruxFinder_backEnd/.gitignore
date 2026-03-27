@@ -1,0 +1,8 @@
+node_modules/
+.env
+
+/src/generated/prisma
+
+# Claude 관련 기록 숨기기
+claude.log
+.claude/

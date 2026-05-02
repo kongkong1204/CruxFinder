@@ -1,18 +1,21 @@
+// lib/screens/SignUp.dart
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-import 'package:crux_finder/components/button_primary.dart';
-import 'package:crux_finder/components/text_field.dart';
-import 'package:crux_finder/styles/colors.dart';
-import 'package:crux_finder/styles/fonts.dart';
+import '../components/ButtonPrimary.dart';
+import '../components/TextField.dart';
+import '../styles/colors.dart';
+import '../styles/fonts.dart';
 
-class SignUpPage extends StatefulWidget {
-  const SignUpPage({super.key});
+class SignUpScreen extends StatefulWidget {
+  const SignUpScreen({super.key});
 
   @override
-  State<SignUpPage> createState() => _SignUpPageState();
+  State<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _SignUpPageState extends State<SignUpPage> {
+class _SignUpScreenState extends State<SignUpScreen> {
 
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -88,7 +91,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
               Text(
                 '회원가입',
-                style: AppFonts.title.m.copyWith(
+                style: AppFonts.title.T.copyWith(
                   color: AppColors.dark.darkest,
                 ),
               ),
@@ -132,8 +135,6 @@ class _SignUpPageState extends State<SignUpPage> {
 
               ButtonPrimary(
                 text: '회원가입',
-                backgroundColor: buttonColor,
-                textColor: AppColors.light.lightest,
                 onPressed: _submit,
               ),
 

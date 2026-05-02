@@ -1,8 +1,11 @@
-// lib/screens/splash.dart
+// lib/screens/Splash.dart
 
-import 'package:crux_finder/styles/colors.dart';
-import 'package:crux_finder/styles/fonts.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
+import '../styles/colors.dart';
+import '../styles/fonts.dart';
+
 
 class SplashScreen extends StatelessWidget
 {
@@ -41,7 +44,7 @@ class SplashScreen extends StatelessWidget
 
             Text(
               '이제 진짜 시작합니당',
-              style: AppFonts.light.m.copyWith(
+              style: AppFonts.regular.m.copyWith(
                 color: AppColors.signature.darkest
               ),
             )

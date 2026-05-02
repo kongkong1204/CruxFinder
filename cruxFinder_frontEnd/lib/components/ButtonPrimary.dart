@@ -1,14 +1,16 @@
-// lib/components/button_secondary.dart
+// lib/components/ButtonPrimary.dart
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:crux_finder/styles/colors.dart';
-import 'package:crux_finder/styles/fonts.dart';
 
-class ButtonSecondary extends StatelessWidget {
+import '../styles/colors.dart';
+import '../styles/fonts.dart';
+
+class ButtonPrimary extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
 
-  const ButtonSecondary({
+  const ButtonPrimary({
     super.key,
     required this.text,
     required this.onPressed,
@@ -19,20 +21,18 @@ class ButtonSecondary extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: 48,
-      child: OutlinedButton(
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(
-            color: AppColors.signature.darkest,
-            width: 1.5,
-          ),
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.signature.darkest,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
+          elevation: 0,
         ),
         onPressed: onPressed,
         child: Text(
           text,
-          style: AppFonts.light.xl.copyWith(
+          style: AppFonts.regular.xl.copyWith(
             color: AppColors.dark.darkest,
           ),
         ),

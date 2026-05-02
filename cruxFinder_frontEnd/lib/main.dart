@@ -1,13 +1,14 @@
-import 'package:crux_finder/components/button_secondary.dart';
-import 'package:crux_finder/screens/feed.dart';
-import 'package:crux_finder/screens/feed_upload.dart';
-import 'package:crux_finder/screens/signin.dart';
-import 'package:crux_finder/screens/signup.dart';
+import 'package:crux_finder/components/ButtonSecondary.dart';
+import 'package:crux_finder/screens/Feed.dart';
+import 'package:crux_finder/screens/FeedUpload.dart';
+import 'package:crux_finder/screens/SignIn.dart';
+import 'package:crux_finder/screens/SignUp.dart';
+import 'package:crux_finder/screens/Profile.dart';
+import 'package:crux_finder/screens/ProfileAccount.dart';
+import 'package:crux_finder/screens/ProfileBody.dart';
+import 'package:crux_finder/screens/Home.dart';
 import 'package:flutter/material.dart';
-import 'components/button_primary.dart';
-import 'components/tab_bar.dart';
-import 'components/text_field.dart';
-import 'components/drop_down.dart';
+
 
 
 void main() {
@@ -24,7 +25,7 @@ class MyApp extends StatelessWidget {
       onGenerateRoute: (settings){
         switch(settings.name){
           case '/feed':
-            return MaterialPageRoute(builder: (_) => const SignUpPage());
+            return MaterialPageRoute(builder: (_) => const ProfileScreen());
         }
       },
     );

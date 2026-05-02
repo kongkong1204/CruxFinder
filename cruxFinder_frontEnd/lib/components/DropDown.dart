@@ -1,17 +1,18 @@
-// lib/components/drop_down.dart
+// lib/components/DropDown.dart
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:crux_finder/styles/colors.dart';
-import 'package:crux_finder/styles/fonts.dart';
 
-class drop_down extends StatefulWidget {
+import '../styles/colors.dart';
+import '../styles/fonts.dart';
+
+class DropDown extends StatefulWidget {
   final String title;
   final List<String> items;
   final String? initialValue;
   final ValueChanged<String> onChanged;
 
-  const drop_down({
+  const DropDown({
     super.key,
     required this.title,
     required this.items,
@@ -20,10 +21,10 @@ class drop_down extends StatefulWidget {
   });
 
   @override
-  State<drop_down> createState() => _drop_downState();
+  State<DropDown> createState() => _DropDownState();
 }
 
-class _drop_downState extends State<drop_down> {
+class _DropDownState extends State<DropDown> {
   late String selectedValue;
 
   @override
@@ -51,12 +52,12 @@ class _drop_downState extends State<drop_down> {
           child: Column(
             children: [
               Container(
-                height: 52,
+                height: 30,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   border: Border(
                     bottom: BorderSide(
-                      color: Color(0xFFE5E5EA),
+                      color: AppColors.dark.darkest,
                       width: 1,
                     ),
                   ),
@@ -66,11 +67,10 @@ class _drop_downState extends State<drop_down> {
                   children: [
                     CupertinoButton(
                       padding: EdgeInsets.zero,
-                      child: const Text(
+                      child: Text(
                         '완료',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w600,
+                        style: AppFonts.regular.m.copyWith(
+                          color: AppColors.dark.darkest
                         ),
                       ),
                       onPressed: () {
@@ -96,7 +96,7 @@ class _drop_downState extends State<drop_down> {
                         (item) => Center(
                       child: Text(
                         item,
-                        style: AppFonts.light.m.copyWith(
+                        style: AppFonts.regular.m.copyWith(
                           color: AppColors.dark.darkest
                         ),
                       ),
@@ -120,7 +120,7 @@ class _drop_downState extends State<drop_down> {
       children: [
         Text(
           widget.title,
-            style : AppFonts.bold.h4.copyWith(
+            style : AppFonts.bold.s.copyWith(
                 color : AppColors.dark.darkest
             )
         ),
@@ -149,7 +149,7 @@ class _drop_downState extends State<drop_down> {
                           alignment: Alignment.centerLeft,
                           child: Text(
                             selectedValue,
-                            style : AppFonts.bold.h4.copyWith(
+                            style : AppFonts.bold.s.copyWith(
                                 color : AppColors.dark.darkest
                             ),
                             overflow: TextOverflow.ellipsis,

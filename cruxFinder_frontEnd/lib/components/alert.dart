@@ -1,10 +1,12 @@
-// lib/components/alert.dart
+// lib/components/Alert.dart
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:crux_finder/styles/colors.dart';
-import 'package:crux_finder/styles/fonts.dart';
 
-class Information_alert {
+import '../styles/colors.dart';
+import '../styles/fonts.dart';
+
+class InformationAlert {
   static void show(
       BuildContext context, {
         required String description,
@@ -34,7 +36,7 @@ class Information_alert {
   }
 }
 
-class Error_alert {
+class ErrorAlert {
   static void show(
       BuildContext context, {
         required String description,
@@ -105,7 +107,7 @@ class _AlertWidget extends StatelessWidget {
                 children: [
                     Text(
                       description,
-                      style: AppFonts.light.l.copyWith(
+                      style: AppFonts.regular.l.copyWith(
                         color: descriptionColor,
                       ),
                     ),

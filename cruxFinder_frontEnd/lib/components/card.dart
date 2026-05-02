@@ -1,6 +1,10 @@
+// lib/components/Card.dart
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:crux_finder/styles/colors.dart';
-import 'package:crux_finder/styles/fonts.dart';
+
+import '../styles/colors.dart';
+import '../styles/fonts.dart';
 
 class FeedCard extends StatelessWidget {
 
@@ -28,7 +32,7 @@ class FeedCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: AppColors.light.lightest,
+        color: AppColors.signature.darkest,
         borderRadius: BorderRadius.circular(28),
       ),
       child: Column(
@@ -74,12 +78,12 @@ class FeedCard extends StatelessWidget {
             child: GestureDetector(
               onTap: onMoreTap,
               child: Image.asset(
-                'assets/icons/search.png',
+                'assets/icons/dot.png',
                 width: 24,
                 height: 24,
               ),
             ),
-          ),
+          ),  //피드 수정 및 삭제에 사용하는 기능, 작업 진행상황에 따라 기능 구현하지 않을수도
         ],
       ),
     );
@@ -88,12 +92,7 @@ class FeedCard extends StatelessWidget {
   Widget _buildBottomSection() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(
-        16,
-        16,
-        16,
-        16,
-      ),
+      padding: const EdgeInsets.all(16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -105,14 +104,14 @@ class FeedCard extends StatelessWidget {
                 children: [
                   Text(
                     memo,
-                    style: AppFonts.light.m.copyWith(
+                    style: AppFonts.regular.m.copyWith(
                       color: AppColors.dark.darkest
                     )
                   ),
                   const Spacer(),
                   Text(
                     dateText,
-                      style: AppFonts.light.xs.copyWith(
+                      style: AppFonts.regular.xs.copyWith(
                           color: AppColors.dark.darkest
                       )
                   ),
@@ -129,13 +128,13 @@ class FeedCard extends StatelessWidget {
               children: [
                 Text(
                   absoluteGrade,
-                    style: AppFonts.title.m.copyWith(
+                    style: AppFonts.title.T.copyWith(
                         color: AppColors.dark.darkest
                     )
                 ),
                 Text(
                   relativeGrade,
-                    style: AppFonts.title.m.copyWith(
+                    style: AppFonts.title.T.copyWith(
                         color: AppColors.dark.darkest
                     )
                 ),

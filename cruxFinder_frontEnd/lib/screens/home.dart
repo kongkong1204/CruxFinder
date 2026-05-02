@@ -1,10 +1,11 @@
-// lib/screens/Feed.dart
+// lib/screens/Home.dart
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../components/Card.dart';
 import '../components/TabBar.dart';
+import '../components/ButtonPrimary.dart';
 import '../styles/colors.dart';
 import '../styles/fonts.dart';
 
@@ -31,15 +32,15 @@ class FeedItem {
   }
 }
 
-class FeedScreen extends StatefulWidget {
-  const FeedScreen({super.key});
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
   @override
-  State<FeedScreen> createState() => _FeedScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _FeedScreenState extends State<FeedScreen> {
-  int selectedTabIndex = 1;
+class _HomeScreenState extends State<HomeScreen> {
+  int selectedTabIndex = 0;
 
   bool isLoading = true;
   String? errorMessage;
@@ -61,18 +62,6 @@ class _FeedScreenState extends State<FeedScreen> {
           dateText: '2026.03.22',
           absoluteGrade: 'V5',
           relativeGrade: '6',
-        ),
-        FeedItem(
-          memo: '메모 내용 작성 란',
-          dateText: '2026.03.21',
-          absoluteGrade: 'V4',
-          relativeGrade: '5',
-        ),
-        FeedItem(
-          memo: '슬로퍼가 너무 힘들었다',
-          dateText: '2026.03.20',
-          absoluteGrade: 'V3',
-          relativeGrade: '4',
         ),
       ];
 
@@ -104,8 +93,18 @@ class _FeedScreenState extends State<FeedScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Text(
-                'Feed',
+                'Crux Finder',
                 style: AppFonts.title.T.copyWith(
+                  color: AppColors.dark.darkest,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                '최근 기록',
+                style: AppFonts.bold.l.copyWith(
                   color: AppColors.dark.darkest,
                 ),
               ),
@@ -127,13 +126,8 @@ class _FeedScreenState extends State<FeedScreen> {
                   }
 
                   if (feeds.isEmpty) {
-                    return Center(
-                      child: Text(
-                        '피드가 없습니다.',
-                        style: AppFonts.bold.m.copyWith(
-                          color: AppColors.signature.darkest,
-                        ),
-                      ),
+                    return const Center(
+                      child: Text('피드가 없습니다.'),
                     );
                   }
 
@@ -157,6 +151,19 @@ class _FeedScreenState extends State<FeedScreen> {
                   );
                 },
               ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                'Crux Finder와 함께 분석하기',
+                style: AppFonts.bold.xl.copyWith(
+                  color: AppColors.dark.darkest,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              child: ButtonPrimary(text: '시작하기', onPressed: () {}),
             ),
           ],
         ),

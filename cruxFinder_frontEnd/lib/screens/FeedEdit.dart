@@ -1,30 +1,49 @@
-// lib/screens/feed_upload.dart
+// lib/screens/FeedEdit.dart
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-import 'package:crux_finder/components/button_primary.dart';
-import 'package:crux_finder/components/drop_down.dart';
-import 'package:crux_finder/components/tab_bar.dart';
-import 'package:crux_finder/styles/colors.dart';
-import 'package:crux_finder/styles/fonts.dart';
+import '../components/ButtonPrimary.dart';
+import '../components/DropDown.dart';
+import '../components/TabBar.dart';
+import '../styles/colors.dart';
+import '../styles/fonts.dart';
 
-class FeedUploadPage extends StatefulWidget {
-  const FeedUploadPage({super.key});
+class FeedEditScreen extends StatefulWidget {
+  final int feedId;
+  final String initialMemo;
+  final DateTime initialDateTime;
+  final String initialVGrade;
+  final String initialMyDifficulty;
+  final String? initialImageUrl;
+
+  const FeedEditScreen({
+    super.key,
+    required this.feedId,
+    required this.initialMemo,
+    required this.initialDateTime,
+    required this.initialVGrade,
+    required this.initialMyDifficulty,
+    this.initialImageUrl,
+  });
 
   @override
-  State<FeedUploadPage> createState() => _FeedUploadPageState();
+  State<FeedEditScreen> createState() => _FeedEditScreenState();
 }
 
-class _FeedUploadPageState extends State<FeedUploadPage> {
+class _FeedEditScreenState extends State<FeedEditScreen> {
   final TextEditingController _memoController = TextEditingController();
 
-  DateTime _selectedDateTime = DateTime(2025, 4, 1, 9, 41);
-  int _selectedTabIndex = 3;
-  bool _hasImage = false;
+  late DateTime _selectedDateTime;
+  late String _selectedVGrade;
+  late String _selectedMyDifficulty;
 
-  String _selectedVGrade = 'VB';
-  String _selectedMyDifficulty = '1';
+  int _selectedTabIndex = 3;
+  bool _isSubmitting = false;
+
+  String? _existingImageUrl;
+  bool _removeExistingImage = false;
+  bool _hasImage = false;
 
   final List<String> _vGradeItems = [
     'VB',
@@ -54,6 +73,28 @@ class _FeedUploadPageState extends State<FeedUploadPage> {
     '10'
   ];
 
+  bool get _canSubmit {
+    return _memoController.text.trim().isNotEmpty &&
+        _selectedVGrade != 'text' &&
+        _selectedMyDifficulty != 'text';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    _memoController.text = widget.initialMemo;
+    _selectedDateTime = widget.initialDateTime;
+    _selectedVGrade = widget.initialVGrade;
+    _selectedMyDifficulty = widget.initialMyDifficulty;
+    _existingImageUrl = widget.initialImageUrl;
+    _hasImage = widget.initialImageUrl != null && widget.initialImageUrl!.isNotEmpty;
+
+    _memoController.addListener(() {
+      setState(() {});
+    });
+  }
+
   @override
   void dispose() {
     _memoController.dispose();
@@ -63,12 +104,12 @@ class _FeedUploadPageState extends State<FeedUploadPage> {
   Future<void> _showCupertinoDateTimePicker() async {
     DateTime tempDate = _selectedDateTime;
 
-    await showCupertinoModalPopup(
+    await showCupertinoModalPopup<void>(
       context: context,
       builder: (_) {
         return Container(
           height: 300,
-          color: Colors.white,
+          color: AppColors.light.lightest,
           child: Column(
             children: [
               Container(
@@ -113,6 +154,71 @@ class _FeedUploadPageState extends State<FeedUploadPage> {
     );
   }
 
+  void _onTapChangePhoto() {
+    setState(() {
+      if (_existingImageUrl != null && _existingImageUrl!.isNotEmpty) {
+        _removeExistingImage = !_removeExistingImage;
+        _hasImage = !_removeExistingImage;
+      } else {
+        _hasImage = !_hasImage;
+      }
+    });
+  }
+
+  Future<void> _submitEdit() async {
+    if (!_canSubmit || _isSubmitting) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final requestBody = {
+        'feedId': widget.feedId,
+        'memo': _memoController.text.trim(),
+        'climbedAt': _selectedDateTime.toIso8601String(),
+        'vGrade': _selectedVGrade,
+        'myDifficulty': _selectedMyDifficulty,
+        'keepExistingImage': _existingImageUrl != null && !_removeExistingImage,
+        'removeExistingImage': _removeExistingImage,
+        'hasImage': _hasImage,
+      };
+
+      debugPrint('UPDATE FEED');
+      debugPrint(requestBody.toString());
+
+      // TODO:
+      // await feedRepository.updateFeed(
+      //   feedId: widget.feedId,
+      //   requestBody: requestBody,
+      // );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('피드가 수정되었어요.'),
+        ),
+      );
+
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('수정 중 오류가 발생했어요: $e'),
+        ),
+      );
+    } finally {
+      if (!mounted) return;
+
+      setState(() {
+        _isSubmitting = false;
+      });
+    }
+  }
+
   String _formatDate(DateTime dateTime) {
     const months = [
       'Jan',
@@ -141,6 +247,7 @@ class _FeedUploadPageState extends State<FeedUploadPage> {
 
   @override
   Widget build(BuildContext context) {
+
     return CupertinoPageScaffold(
       backgroundColor: AppColors.light.lightest,
       child: SafeArea(
@@ -153,32 +260,35 @@ class _FeedUploadPageState extends State<FeedUploadPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'upload',
-                      style: AppFonts.bold.h1.copyWith(
+                      'edit',
+                      style: AppFonts.bold.xl.copyWith(
                         color: AppColors.dark.darkest,
                       ),
                     ),
                     const SizedBox(height: 28),
-                    _UploadImageSection(
+
+                    _EditImageSection(
                       hasImage: _hasImage,
-                      onTapChangePhoto: () {
-                        setState(() {
-                          _hasImage = !_hasImage;
-                        });
-                      },
+                      isRemoved: _removeExistingImage,
+                      onTapChangePhoto: _onTapChangePhoto,
                     ),
+
                     const SizedBox(height: 18),
+
                     Text(
                       '문제에 대해 자유롭게 메모하세요',
-                      style: AppFonts.bold.h5.copyWith(
+                      style: AppFonts.bold.xs.copyWith(
                         color: AppColors.dark.darkest,
                       ),
                     ),
                     const SizedBox(height: 12),
+
                     _MemoInputBox(
                       controller: _memoController,
                     ),
+
                     const SizedBox(height: 20),
+
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -193,13 +303,14 @@ class _FeedUploadPageState extends State<FeedUploadPage> {
                         ),
                       ],
                     ),
+
                     const SizedBox(height: 20),
 
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child: drop_down(
+                          child: DropDown(
                             title: 'V등급 난이도',
                             items: _vGradeItems,
                             initialValue: _selectedVGrade,
@@ -212,7 +323,7 @@ class _FeedUploadPageState extends State<FeedUploadPage> {
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: drop_down(
+                          child: DropDown(
                             title: '나의 체감 난이도',
                             items: _myDifficultyItems,
                             initialValue: _selectedMyDifficulty,
@@ -229,27 +340,18 @@ class _FeedUploadPageState extends State<FeedUploadPage> {
                     const SizedBox(height: 40),
 
                     ButtonPrimary(
-                      text: '다음',
-                      backgroundColor: AppColors.signature.darkest,
-                      onPressed: () {
-                        debugPrint('memo: ${_memoController.text}');
-                        debugPrint('dateTime: $_selectedDateTime');
-                        debugPrint('vGrade: $_selectedVGrade');
-                        debugPrint('myDifficulty: $_selectedMyDifficulty');
-                      },
+                      text: _isSubmitting ? '처리 중...' : '수정 완료',
+                      onPressed: _submitEdit,
                     ),
                   ],
                 ),
               ),
             ),
+
             const Divider(height: 1),
+
             CustomTabBar(
               selectedIndex: _selectedTabIndex,
-              onTap: (index) {
-                setState(() {
-                  _selectedTabIndex = index;
-                });
-              },
             ),
           ],
         ),
@@ -258,17 +360,25 @@ class _FeedUploadPageState extends State<FeedUploadPage> {
   }
 }
 
-class _UploadImageSection extends StatelessWidget {
+class _EditImageSection extends StatelessWidget {
   final bool hasImage;
+  final bool isRemoved;
   final VoidCallback onTapChangePhoto;
 
-  const _UploadImageSection({
+  const _EditImageSection({
     required this.hasImage,
+    required this.isRemoved,
     required this.onTapChangePhoto,
   });
 
   @override
   Widget build(BuildContext context) {
+    String buttonText = '사진 변경하기';
+
+    if (isRemoved) {
+      buttonText = '사진 다시 적용하기';
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
@@ -293,8 +403,8 @@ class _UploadImageSection extends StatelessWidget {
                 color: AppColors.light.light,
                 alignment: Alignment.center,
                 child: Text(
-                  '선택된 이미지',
-                  style: AppFonts.light.m.copyWith(
+                  '기존 또는 새 이미지',
+                  style: AppFonts.regular.m.copyWith(
                     color: AppColors.dark.darkest,
                   ),
                 ),
@@ -317,8 +427,8 @@ class _UploadImageSection extends StatelessWidget {
               padding: EdgeInsets.zero,
               onPressed: onTapChangePhoto,
               child: Text(
-                '사진 변경하기',
-                style: AppFonts.light.xl.copyWith(
+                buttonText,
+                style: AppFonts.regular.xl.copyWith(
                   color: AppColors.dark.darkest,
                 ),
               ),
@@ -340,7 +450,7 @@ class _MemoInputBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 70,
+      height: 96,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
         border: Border.all(
@@ -358,10 +468,10 @@ class _MemoInputBox extends StatelessWidget {
           color: Colors.transparent,
         ),
         placeholder: 'text',
-        placeholderStyle: AppFonts.light.xl.copyWith(
-          color: AppColors.dark.darkest,
+        placeholderStyle: AppFonts.regular.xl.copyWith(
+          color: AppColors.dark.darkest.withValues(alpha: 0.55),
         ),
-        style: AppFonts.light.xl.copyWith(
+        style: AppFonts.regular.xl.copyWith(
           color: AppColors.dark.darkest,
         ),
         cursorColor: AppColors.signature.darkest,
@@ -393,7 +503,7 @@ class _DateChip extends StatelessWidget {
         ),
         child: Text(
           text,
-          style: AppFonts.light.m.copyWith(
+          style: AppFonts.regular.m.copyWith(
             color: AppColors.dark.darkest,
           ),
         ),

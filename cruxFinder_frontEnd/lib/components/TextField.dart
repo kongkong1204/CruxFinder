@@ -1,14 +1,11 @@
+// lib/components/TextField.dart
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:crux_finder/styles/colors.dart';
-import 'package:crux_finder/styles/fonts.dart';
-
-enum TextFieldState {
-  defaultState,
-  error,
-  disabled,
-}
+import '../styles/colors.dart';
+import '../styles/fonts.dart';
 
 class CustomTextField extends StatelessWidget {
   final String? label;
@@ -16,7 +13,6 @@ class CustomTextField extends StatelessWidget {
   final FormFieldSetter<String>? onSaved;
   final String? initialValue;
   final TextEditingController? controller;
-  final TextFieldState state;
   final String? placeholder;
   final bool obscureText;
   final int? maxLength;
@@ -34,7 +30,6 @@ class CustomTextField extends StatelessWidget {
     this.onSaved,
     this.initialValue,
     this.controller,
-    this.state = TextFieldState.defaultState,
     this.placeholder,
     this.obscureText = false,
     this.maxLength,
@@ -53,35 +48,15 @@ class CustomTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     const borderRadius = BorderRadius.all(Radius.circular(24));
 
-    final Color borderColor;
-    final Color textColor;
-    final Color hintColor;
-    final Color labelColor;
+    final Color borderColor = enabled
+        ? AppColors.signature.darkest
+        : AppColors.light.darkest;
 
-    switch (state) {
-      case TextFieldState.error:
-        borderColor = Colors.redAccent;
-        textColor = AppColors.dark.darkest;
-        hintColor = AppColors.light.darkest;
-        labelColor = AppColors.dark.darkest;
-        break;
+    final Color textColor = enabled
+        ? AppColors.dark.darkest
+        : AppColors.light.darkest;
 
-      case TextFieldState.disabled:
-        borderColor = AppColors.light.darkest;
-        textColor = AppColors.light.darkest;
-        hintColor = AppColors.light.darkest;
-        labelColor = AppColors.light.darkest;
-        break;
-
-      case TextFieldState.defaultState:
-        borderColor = AppColors.signature.darkest;
-        textColor = AppColors.dark.darkest;
-        hintColor = AppColors.light.darkest;
-        labelColor = AppColors.dark.darkest;
-        break;
-    }
-
-    final OutlineInputBorder defaultBorder = OutlineInputBorder(
+    final OutlineInputBorder disableBorder = OutlineInputBorder(
       borderRadius: borderRadius,
       borderSide: BorderSide(
         color: borderColor,
@@ -99,8 +74,8 @@ class CustomTextField extends StatelessWidget {
 
     final OutlineInputBorder errorBorder = OutlineInputBorder(
       borderRadius: borderRadius,
-      borderSide: const BorderSide(
-        color: Colors.redAccent,
+      borderSide: BorderSide(
+        color: AppColors.error.lightest,
         width: 2,
       ),
     );
@@ -110,20 +85,20 @@ class CustomTextField extends StatelessWidget {
       counterText: '',
       filled: true,
       fillColor: AppColors.light.lightest,
-      hintStyle: AppFonts.light.xl.copyWith(
-        color: hintColor,
+      hintStyle: AppFonts.regular.xl.copyWith(
+        color: AppColors.light.darkest,
       ),
       contentPadding: const EdgeInsets.symmetric(
         horizontal: 20,
         vertical: 14,
       ),
-      enabledBorder: defaultBorder,
+      enabledBorder: disableBorder,
       focusedBorder: focusedBorder,
-      disabledBorder: defaultBorder,
+      disabledBorder: disableBorder,
       errorBorder: errorBorder,
       focusedErrorBorder: errorBorder,
-      errorStyle: AppFonts.light.s.copyWith(
-        color: Colors.redAccent,
+      errorStyle: AppFonts.regular.s.copyWith(
+        color: AppColors.error.lightest,
       ),
     );
 
@@ -134,8 +109,10 @@ class CustomTextField extends StatelessWidget {
         if (label != null) ...[
           Text(
             label!,
-            style: AppFonts.bold.h5.copyWith(
-              color: labelColor,
+            style: AppFonts.bold.xs.copyWith(
+              color: enabled
+                  ? AppColors.dark.darkest
+                  : AppColors.light.darkest,
             ),
           ),
           const SizedBox(height: 8),
@@ -152,8 +129,8 @@ class CustomTextField extends StatelessWidget {
           maxLength: maxLength,
           inputFormatters: inputFormatters,
           keyboardType: keyboardType,
-          enabled: enabled && state != TextFieldState.disabled,
-          style: AppFonts.light.xl.copyWith(
+          enabled: enabled,
+          style: AppFonts.regular.xl.copyWith(
             color: textColor,
           ),
           cursorColor: AppColors.signature.darkest,

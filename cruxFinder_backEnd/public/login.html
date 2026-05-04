@@ -29,7 +29,12 @@
   <div id="error"></div>
   <div class="footer">계정이 없나요? <a href="/signup.html">회원가입</a></div>
 
+  <div class="footer" id="forgotPw" style="display:none;">
+    비밀번호를 잊어버리셨나요? <a href="/forgot-password.html">비밀번호 찾기</a>
+  </div>
+
   <script>
+    let failCount = 0;
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       document.getElementById('error').textContent = '';
@@ -50,7 +55,11 @@
         localStorage.setItem('user', JSON.stringify(data.user));
         window.location.href = '/index.html';
       } catch (err) {
-        document.getElementById('error').textContent = err.message;
+        failCount++;
+        document.getElementById('error').textContent = `이메일 또는 비밀번호가 올바르지 않습니다. (${failCount})`;
+        if (failCount >= 5) {
+          document.getElementById('forgotPw').style.display = 'block';
+        }
       }
     });
   </script>

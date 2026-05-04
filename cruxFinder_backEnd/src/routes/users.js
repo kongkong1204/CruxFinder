@@ -72,14 +72,36 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { email, name, password } = req.body;
+    const { email, name, password, heightCm, weightKg, armReachCm } = req.body;
     if (!email) return res.status(400).json({ message: '이메일은 필수입니다.' });
     if (!password) return res.status(400).json({ message: '비밀번호는 필수입니다.' });
+    if (!heightCm || !weightKg || !armReachCm) {
+      return res.status(400).json({ message: '키, 체중, 팔 길이를 모두 입력해주세요.' });
+    }
+
     if (!/^(?=.*[A-Za-z])(?=.*\d).+$/.test(password))
       return res.status(400).json({ message: '비밀번호는 영문과 숫자를 모두 포함해야 합니다.' });
     const hashed = await bcrypt.hash(password, 10);
-    const user = await prisma.user.create({ data: { email, name, password: hashed } });
-    res.status(201).json({ id: user.id, email: user.email, name: user.name });
+    const user = await prisma.user.create({
+      data: { email, name, password: hashed },
+    });
+
+    const profile = await prisma.userProfile.create({
+      data: {
+        userEmail: user.email,
+        heightCm: Number(heightCm),
+        weightKg: Number(weightKg),
+        armReachCm: Number(armReachCm),
+      },
+    });
+
+    res.status(201).json({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      profile,
+    });
+
   } catch (err) {
     if (err.code === 'P2002') return res.status(409).json({ message: '이미 사용 중인 이메일입니다.' });
     res.status(500).json({ message: '서버 오류' });

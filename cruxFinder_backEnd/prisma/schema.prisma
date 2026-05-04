@@ -16,4 +16,19 @@ model User {
   email    String  @unique
   name     String?
   password String
+
+  profile  UserProfile?
+}
+
+
+// npx prisma migrate dev --name add_user_profile
+// npx prisma generate
+model UserProfile {
+  id         Int     @id @default(autoincrement())
+  userEmail  String  @unique
+  heightCm   Float?
+  weightKg   Float?
+  armReachCm Float?
+
+  user User @relation(fields: [userEmail], references: [email], onDelete: Cascade)
 }

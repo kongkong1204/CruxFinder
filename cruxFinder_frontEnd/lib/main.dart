@@ -1,8 +1,15 @@
+import 'package:crux_finder/components/ButtonSecondary.dart';
+import 'package:crux_finder/screens/Feed.dart';
+import 'package:crux_finder/screens/FeedUpload.dart';
+import 'package:crux_finder/screens/SignIn.dart';
+import 'package:crux_finder/screens/SignUp.dart';
+import 'package:crux_finder/screens/Profile.dart';
+import 'package:crux_finder/screens/ProfileAccount.dart';
+import 'package:crux_finder/screens/ProfileBody.dart';
+import 'package:crux_finder/screens/Home.dart';
 import 'package:flutter/material.dart';
-import 'package:crux_finder/screens/signin.dart';
-import 'package:crux_finder/screens/signup.dart';
-import 'package:crux_finder/screens/splash.dart';
-import 'package:crux_finder/screens/feed.dart';
+
+
 
 void main() {
   runApp(const MyApp());
@@ -14,19 +21,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      initialRoute: '/splash',
-      onGenerateRoute: (settings) {
-        switch (settings.name) {
-          case '/splash':
-            return MaterialPageRoute(builder: (_) => const SplashScreen());
-          case '/signin':
-            return MaterialPageRoute(builder: (_) => const LoginPage());
-          case '/signup':
-            return MaterialPageRoute(builder: (_) => const SignUpPage());
+      initialRoute: '/feed',
+      onGenerateRoute: (settings){
+        switch(settings.name){
           case '/feed':
-            return MaterialPageRoute(builder: (_) => const FeedScreen());
-          default:
-            return MaterialPageRoute(builder: (_) => const SplashScreen());
+            return MaterialPageRoute(builder: (_) => const ProfileScreen());
         }
       },
     );

@@ -1,41 +1,27 @@
-// lib/screens/splash.dart
+// lib/screens/Splash.dart
 
-import 'package:crux_finder/services/api_service.dart';
-import 'package:crux_finder/styles/colors.dart';
-import 'package:crux_finder/styles/fonts.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-class SplashScreen extends StatefulWidget {
+import '../styles/colors.dart';
+import '../styles/fonts.dart';
+
+
+class SplashScreen extends StatelessWidget
+{
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    _init();
-  }
-
-  Future<void> _init() async {
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
-    await ApiService().loadToken();
-    final hasToken = await ApiService().hasToken();
-    if (!mounted) return;
-    Navigator.pushReplacementNamed(context, hasToken ? '/feed' : '/signin');
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context)
+  {
     return Scaffold(
       backgroundColor: AppColors.light.lightest,
-
-      body: Center(
+      
+      body: Center
+      (
         child: Column(
           mainAxisSize: MainAxisSize.min,
+
           children: [
             Container(
               decoration: BoxDecoration(
@@ -47,23 +33,24 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
                 ],
               ),
-              child: Image.asset(
-                'assets/images/crux_finder_icon.png',
-                width: 100,
-              ),
-            ),
 
-            const SizedBox(height: 20),
+                child: Image.asset(
+                  'assets/images/crux_finder_icon.png',
+                  width: 100,
+                ),
+              ),
+
+            const SizedBox(height: 20,),
 
             Text(
               '이제 진짜 시작합니당',
-              style: AppFonts.light.m.copyWith(
-                color: AppColors.signature.darkest,
+              style: AppFonts.regular.m.copyWith(
+                color: AppColors.signature.darkest
               ),
-            ),
+            )
           ],
         ),
-      ),
+      )
     );
   }
 }

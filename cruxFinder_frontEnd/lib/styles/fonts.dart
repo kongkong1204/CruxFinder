@@ -10,37 +10,37 @@ import 'package:flutter/material.dart';
 
 class AppFonts {
   static final bold = Bold();
-  static final light = Light();
+  static final regular = Light();
   static final title = Title();
 }
 
 // Bold
 class Bold {
-  final h1 = const TextStyle(
+  final xl = const TextStyle(
     fontFamily: 'inter',
     fontSize: 24,
     fontWeight: FontWeight.w700, // Bold
   );
 
-  final h2 = const TextStyle(
+  final l = const TextStyle(
     fontFamily: 'inter',
     fontSize: 20,
     fontWeight: FontWeight.w700, // Bold
   );
 
-  final h3 = const TextStyle(
+  final m = const TextStyle(
     fontFamily: 'inter',
     fontSize: 16,
     fontWeight: FontWeight.w700, // Bold
   );
 
-  final h4 = const TextStyle(
+  final s = const TextStyle(
     fontFamily: 'inter',
     fontSize: 15,
     fontWeight: FontWeight.w600, // semiBold
   );
 
-  final h5 = const TextStyle(
+  final xs = const TextStyle(
     fontFamily: 'inter',
     fontSize: 14,
     fontWeight: FontWeight.w600, // semiBold
@@ -82,7 +82,7 @@ class Light {
 
 // title
 class Title {
-  final m = const TextStyle(
+  final T = const TextStyle(
     fontFamily: 'inter',
     fontSize: 40,
     fontWeight: FontWeight.w700, // SemiBold

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:crux_finder/screens/splash.dart';
-import 'package:crux_finder/screens/signin.dart' show LoginScreen;
-import 'package:crux_finder/screens/signup.dart' show SignUpScreen;
-import 'package:crux_finder/screens/home.dart';
+import 'package:crux_finder/screens/Splash.dart';
+import 'package:crux_finder/screens/Signin.dart' show LoginScreen;
+import 'package:crux_finder/screens/Signup.dart' show SignUpScreen;
+import 'package:crux_finder/screens/Home.dart';
 
 void main() {
   runApp(const MyApp());

@@ -1,4 +1,4 @@
-// lib/screens/splash.dart
+// lib/screens/Splash.dart
 
 import 'package:flutter/material.dart';
 
@@ -54,7 +54,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 20),
             Text(
-              '이제 진짜 시작합니당',
+              'AI와 함께하는 클라이밍',
               style: AppFonts.regular.m.copyWith(
                 color: AppColors.signature.darkest,
               ),

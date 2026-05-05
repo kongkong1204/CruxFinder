@@ -1,8 +1,10 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import 'package:crux_finder/components/button_primary.dart';
 import 'package:crux_finder/components/text_field.dart';
+import 'package:crux_finder/services/api_service.dart';
 import 'package:crux_finder/styles/colors.dart';
 import 'package:crux_finder/styles/fonts.dart';
 
@@ -42,13 +44,23 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _onTapLogin() {
+  Future<void> _onTapLogin() async {
     if (!_canLogin) return;
 
-    debugPrint('email: ${_emailController.text.trim()}');
-    debugPrint('password: ${_passwordController.text.trim()}');
-
-    // TODO: 로그인 API 연결
+    try {
+      final data = await ApiService().login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/feed');
+    } on DioException catch (e) {
+      final message = e.response?.data['message'] ?? '서버 오류가 발생했습니다.';
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
   }
 
   void _onTapForgotPassword() {
@@ -56,7 +68,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _onTapSignUp() {
-    debugPrint('회원가입 화면 이동');
+    Navigator.pushNamed(context, '/signup');
   }
 
   @override

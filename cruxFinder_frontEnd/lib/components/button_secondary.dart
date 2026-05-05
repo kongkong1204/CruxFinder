@@ -6,7 +6,7 @@ import 'package:crux_finder/styles/fonts.dart';
 
 class ButtonSecondary extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   const ButtonSecondary({
     super.key,
@@ -17,7 +17,6 @@ class ButtonSecondary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: double.infinity,
       height: 48,
       child: OutlinedButton(
         style: OutlinedButton.styleFrom(

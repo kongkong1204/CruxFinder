@@ -5,30 +5,45 @@
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id       Int     @id @default(autoincrement())
-  email    String  @unique
-  name     String?
-  password String
-
-  profile  UserProfile?
+  id              Int      @id @default(autoincrement())
+  email           String   @unique
+  nickname        String   @unique
+  password        String
+  isEmailVerified Boolean  @default(false)
+  height          Float?
+  weight          Float?
+  armReach        Float?
+  feeds           Feed[]
+  createdAt       DateTime @default(now())
 }
 
+model EmailVerification {
+  id        Int      @id @default(autoincrement())
+  email     String
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 
-// npx prisma migrate dev --name add_user_profile
-// npx prisma generate
-model UserProfile {
-  id         Int     @id @default(autoincrement())
-  userEmail  String  @unique
-  heightCm   Float?
-  weightKg   Float?
-  armReachCm Float?
+  @@index([email])
+}
 
-  user User @relation(fields: [userEmail], references: [email], onDelete: Cascade)
+model Feed {
+  id           Int      @id @default(autoincrement())
+  memo         String   @db.Text
+  climbedAt    DateTime
+  vGrade       String
+  myDifficulty String
+  imageUrl     String?
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id])
+  createdAt    DateTime @default(now())
 }

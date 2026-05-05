@@ -6,8 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:crux_finder/components/button_primary.dart';
 import 'package:crux_finder/components/drop_down.dart';
 import 'package:crux_finder/components/tab_bar.dart';
+import 'package:crux_finder/services/api_service.dart';
 import 'package:crux_finder/styles/colors.dart';
 import 'package:crux_finder/styles/fonts.dart';
+import 'package:dio/dio.dart';
 
 class FeedUploadPage extends StatefulWidget {
   const FeedUploadPage({super.key});
@@ -22,6 +24,7 @@ class _FeedUploadPageState extends State<FeedUploadPage> {
   DateTime _selectedDateTime = DateTime(2025, 4, 1, 9, 41);
   int _selectedTabIndex = 3;
   bool _hasImage = false;
+  bool _isSubmitting = false;
 
   String _selectedVGrade = 'VB';
   String _selectedMyDifficulty = '1';
@@ -53,6 +56,32 @@ class _FeedUploadPageState extends State<FeedUploadPage> {
     '9',
     '10'
   ];
+
+  Future<void> _submitUpload() async {
+    if (_memoController.text.trim().isEmpty || _isSubmitting) return;
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      await ApiService().createFeed(
+        memo: _memoController.text.trim(),
+        climbedAt: _selectedDateTime,
+        vGrade: _selectedVGrade,
+        myDifficulty: _selectedMyDifficulty,
+      );
+      if (!mounted) return;
+      Navigator.pop(context);
+    } on DioException catch (e) {
+      if (!mounted) return;
+      final message = e.response?.data['message'] ?? '업로드 실패';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('오류: $e')));
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -229,14 +258,9 @@ class _FeedUploadPageState extends State<FeedUploadPage> {
                     const SizedBox(height: 40),
 
                     ButtonPrimary(
-                      text: '다음',
+                      text: _isSubmitting ? '업로드 중...' : '업로드',
                       backgroundColor: AppColors.signature.darkest,
-                      onPressed: () {
-                        debugPrint('memo: ${_memoController.text}');
-                        debugPrint('dateTime: $_selectedDateTime');
-                        debugPrint('vGrade: $_selectedVGrade');
-                        debugPrint('myDifficulty: $_selectedMyDifficulty');
-                      },
+                      onPressed: _submitUpload,
                     ),
                   ],
                 ),

@@ -42,3 +42,8 @@ node_modules/
 
 claude.log
 .claude/
+
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies

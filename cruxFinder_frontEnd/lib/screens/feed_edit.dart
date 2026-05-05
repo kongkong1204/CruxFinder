@@ -6,8 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:crux_finder/components/button_primary.dart';
 import 'package:crux_finder/components/drop_down.dart';
 import 'package:crux_finder/components/tab_bar.dart';
+import 'package:crux_finder/services/api_service.dart';
 import 'package:crux_finder/styles/colors.dart';
 import 'package:crux_finder/styles/fonts.dart';
+import 'package:dio/dio.dart';
 
 class FeedEditPage extends StatefulWidget {
   final int feedId;
@@ -173,42 +175,30 @@ class _FeedEditPageState extends State<FeedEditPage> {
     });
 
     try {
-      final requestBody = {
-        'feedId': widget.feedId,
-        'memo': _memoController.text.trim(),
-        'climbedAt': _selectedDateTime.toIso8601String(),
-        'vGrade': _selectedVGrade,
-        'myDifficulty': _selectedMyDifficulty,
-        'keepExistingImage': _existingImageUrl != null && !_removeExistingImage,
-        'removeExistingImage': _removeExistingImage,
-        'hasImage': _hasImage,
-      };
-
-      debugPrint('UPDATE FEED');
-      debugPrint(requestBody.toString());
-
-      // TODO:
-      // await feedRepository.updateFeed(
-      //   feedId: widget.feedId,
-      //   requestBody: requestBody,
-      // );
+      await ApiService().updateFeed(
+        feedId: widget.feedId,
+        memo: _memoController.text.trim(),
+        climbedAt: _selectedDateTime,
+        vGrade: _selectedVGrade,
+        myDifficulty: _selectedMyDifficulty,
+      );
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('피드가 수정되었어요.'),
-        ),
+        const SnackBar(content: Text('피드가 수정되었어요.')),
       );
 
       Navigator.pop(context, true);
+    } on DioException catch (e) {
+      if (!mounted) return;
+      final message = e.response?.data['message'] ?? '수정 실패';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('수정 중 오류가 발생했어요: $e'),
-        ),
+        SnackBar(content: Text('수정 중 오류가 발생했어요: $e')),
       );
     } finally {
       if (!mounted) return;

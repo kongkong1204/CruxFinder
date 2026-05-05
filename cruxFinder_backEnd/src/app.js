@@ -2,9 +2,9 @@ import express from 'express';
 import healthRouter from './routes/health.js';
 import usersRouter from './routes/users.js';
 import authRouter from './routes/auth.js';
+import feedsRouter from './routes/feeds.js';
 import { authenticate } from './middlewares/auth.js';
 import mypageRouter from './routes/mypage.js';
-
 
 const app = express();
 
@@ -16,6 +16,7 @@ app.use('/health', healthRouter);
 app.use('/users', usersRouter);
 app.use('/auth', authRouter);
 app.use('/api/mypage', mypageRouter);
+app.use('/feeds', feedsRouter);
 
 app.get('/mypage', (req, res) => {
   res.sendFile('mypage.html', { root: 'public' });

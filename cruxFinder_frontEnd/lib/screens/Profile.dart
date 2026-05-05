@@ -1,4 +1,4 @@
-// lib/screens/profile.dart
+// lib/screens/Profile.dart
 
 import 'package:flutter/material.dart';
 

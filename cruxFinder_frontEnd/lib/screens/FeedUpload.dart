@@ -3,11 +3,17 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import 'dart:io';
+
+import 'package:dio/dio.dart';
+import 'package:image_picker/image_picker.dart';
+
 import '../components/ButtonPrimary.dart';
 import '../components/ButtonSecondary.dart';
 import '../components/DropDown.dart';
 import '../components/TabBar.dart';
 import '../components/TextField.dart';
+import '../services/api_service.dart';
 import '../styles/colors.dart';
 import '../styles/fonts.dart';
 
@@ -22,7 +28,8 @@ class _FeedUploadScreenState extends State<FeedUploadScreen> {
   final TextEditingController _memoController = TextEditingController();
 
   DateTime _selectedDateTime = DateTime(2025, 4, 1, 9, 41);
-  bool _hasImage = false;
+  File? _selectedImage;
+  bool _isSubmitting = false;
 
   String _selectedVGrade = 'VB';
   String _selectedMyDifficulty = '1';
@@ -36,6 +43,38 @@ class _FeedUploadScreenState extends State<FeedUploadScreen> {
     '1', '2', '3', '4', '5',
     '6', '7', '8', '9', '10',
   ];
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked != null) {
+      setState(() => _selectedImage = File(picked.path));
+    }
+  }
+
+  Future<void> _submitUpload() async {
+    if (_memoController.text.trim().isEmpty || _isSubmitting) return;
+    setState(() => _isSubmitting = true);
+    try {
+      await ApiService().createFeed(
+        memo: _memoController.text.trim(),
+        climbedAt: _selectedDateTime,
+        vGrade: _selectedVGrade,
+        myDifficulty: _selectedMyDifficulty,
+      );
+      if (!mounted) return;
+      Navigator.pop(context);
+    } on DioException catch (e) {
+      if (!mounted) return;
+      final message = e.response?.data['message'] ?? '업로드 실패';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('오류: $e')));
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -138,12 +177,8 @@ class _FeedUploadScreenState extends State<FeedUploadScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _UploadImageSection(
-                      hasImage: _hasImage,
-                      onTapChangePhoto: () {
-                        setState(() {
-                          _hasImage = !_hasImage;
-                        });
-                      },
+                      selectedImage: _selectedImage,
+                      onTapChangePhoto: _pickImage,
                     ),
                     const SizedBox(height: 18),
 
@@ -211,14 +246,8 @@ class _FeedUploadScreenState extends State<FeedUploadScreen> {
                     const SizedBox(height: 40),
 
                     ButtonPrimary(
-                      text: '업로드',
-                      onPressed: () {
-                        debugPrint('memo: ${_memoController.text}');
-                        debugPrint('dateTime: $_selectedDateTime');
-                        debugPrint('vGrade: $_selectedVGrade');
-                        debugPrint('myDifficulty: $_selectedMyDifficulty');
-                        // TODO: 다음 화면 이동
-                      },
+                      text: _isSubmitting ? '업로드 중...' : '업로드',
+                      onPressed: _submitUpload,
                     ),
 
                     const SizedBox(height: 24),
@@ -237,11 +266,11 @@ class _FeedUploadScreenState extends State<FeedUploadScreen> {
 }
 
 class _UploadImageSection extends StatelessWidget {
-  final bool hasImage;
+  final File? selectedImage;
   final VoidCallback onTapChangePhoto;
 
   const _UploadImageSection({
-    required this.hasImage,
+    required this.selectedImage,
     required this.onTapChangePhoto,
   });
 
@@ -251,10 +280,7 @@ class _UploadImageSection extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
       decoration: BoxDecoration(
-        border: Border.all(
-          color: AppColors.light.darkest,
-          width: 2,
-        ),
+        border: Border.all(color: AppColors.light.darkest, width: 2),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
@@ -262,28 +288,21 @@ class _UploadImageSection extends StatelessWidget {
           Container(
             height: 120,
             alignment: Alignment.center,
-            child: hasImage
+            child: selectedImage != null
                 ? ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                width: double.infinity,
-                height: 120,
-                color: AppColors.light.light,
-                alignment: Alignment.center,
-                child: Text(
-                  '선택된 이미지',
-                  style: AppFonts.regular.m.copyWith(
-                    color: AppColors.dark.darkest,
-                  ),
-                ),
-              ),
-            )
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.file(
+                      selectedImage!,
+                      width: double.infinity,
+                      height: 120,
+                      fit: BoxFit.cover,
+                    ),
+                  )
                 : Image.asset('assets/icons/photo.png'),
           ),
           const SizedBox(height: 12),
-
           ButtonSecondary(
-            text: '사진 변경하기',
+            text: selectedImage != null ? '사진 변경하기' : '사진 선택하기',
             onPressed: onTapChangePhoto,
           ),
         ],

@@ -1,34 +1,14 @@
-// lib/screens/Profile.dart
+// lib/screens/profile.dart
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../components/TabBar.dart';
+import '../services/api_service.dart';
 import '../styles/colors.dart';
 import '../styles/fonts.dart';
 
 import 'ProfileAccount.dart';
 import 'ProfileBody.dart';
-
-class UserProfile {
-  final String name;
-  final String nickname;
-  final String email;
-  final String height;
-  final String weight;
-  final String armspan;
-  final String inseam;
-
-  const UserProfile({
-    required this.name,
-    required this.nickname,
-    required this.email,
-    required this.height,
-    required this.weight,
-    required this.armspan,
-    required this.inseam,
-  });
-}
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -40,119 +20,156 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   int selectedTabIndex = 4;
 
-  // TODO: 실제 유저 데이터로 교체
-  final UserProfile userProfile = const UserProfile(
-    name: 'name',
-    nickname: 'nickname',
-    email: 'cruxfinder@test.com',
-    height: '',
-    weight: '',
-    armspan: '',
-    inseam: '',
-  );
+  bool isLoading = true;
+  String nickname = '';
+  String email = '';
+  double? height;
+  double? weight;
+  double? armReach;
+  double? inseam;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    setState(() => isLoading = true);
+    try {
+      final data = await ApiService().getMe();
+      if (!mounted) return;
+      setState(() {
+        nickname = data['nickname'] ?? '';
+        email = data['email'] ?? '';
+        height = data['height'] != null ? (data['height'] as num).toDouble() : null;
+        weight = data['weight'] != null ? (data['weight'] as num).toDouble() : null;
+        armReach = data['armReach'] != null ? (data['armReach'] as num).toDouble() : null;
+        inseam = data['inseam'] != null ? (data['inseam'] as num).toDouble() : null;
+        isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _logout() async {
+    await ApiService().clearToken();
+    if (!mounted) return;
+    Navigator.pushNamedAndRemoveUntil(context, '/signin', (_) => false);
+  }
+
+  String _fmt(double? v) {
+    if (v == null) return '';
+    return v == v.truncateToDouble() ? v.toInt().toString() : v.toString();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.light.lightest,
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                'profile',
-                style: AppFonts.title.T.copyWith(
-                  color: AppColors.dark.darkest,
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
+        child: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.signature.darkest,
-                        width: 1.5,
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      'profile',
+                      style: AppFonts.title.T.copyWith(
+                        color: AppColors.dark.darkest,
                       ),
                     ),
-                    child: Image.asset(
-                      'assets/icons/profile.png',
-                      width: 24,
-                      height: 24,
+                  ),
+                  const SizedBox(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.signature.darkest,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Image.asset(
+                            'assets/icons/profile.png',
+                            width: 24,
+                            height: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              nickname,
+                              style: AppFonts.bold.xs.copyWith(
+                                color: AppColors.dark.darkest,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              email,
+                              style: AppFonts.bold.xl.copyWith(
+                                color: AppColors.dark.darkest,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        userProfile.nickname,
-                        style: AppFonts.bold.xs.copyWith(
-                          color: AppColors.dark.darkest,
+                  const SizedBox(height: 36),
+                  _ProfileMenuItem(
+                    label: '계정 정보 수정',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ProfileAccountScreen(
+                            nickname: nickname,
+                            email: email,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        userProfile.email,
-                        style: AppFonts.bold.xl.copyWith(
-                          color: AppColors.dark.darkest,
-                        ),
-                      ),
-                    ],
+                      ).then((_) => _loadUser());
+                    },
                   ),
+                  Divider(color: AppColors.signature.darkest, thickness: 0.5, height: 0),
+                  _ProfileMenuItem(
+                    label: '신체 정보 수정',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ProfileBodyScreen(
+                            nickname: nickname,
+                            email: email,
+                            height: _fmt(height),
+                            weight: _fmt(weight),
+                            armReach: _fmt(armReach),
+                            inseam: _fmt(inseam),
+                          ),
+                        ),
+                      ).then((_) => _loadUser());
+                    },
+                  ),
+                  Divider(color: AppColors.signature.darkest, thickness: 0.5, height: 0),
+                  _ProfileMenuItem(
+                    label: '로그아웃',
+                    onTap: _logout,
+                  ),
+                  Divider(color: AppColors.signature.darkest, thickness: 0.5, height: 0),
                 ],
               ),
-            ),
-
-            const SizedBox(height: 36),
-
-            _ProfileMenuItem(
-              label: '계정 정보 수정',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ProfileAccountScreen(
-                      nickname: userProfile.nickname,
-                      email: userProfile.email,
-                      name: userProfile.name,
-                    ),
-                  ),
-                );
-              },
-            ),
-            Divider(color: AppColors.signature.darkest, thickness: 0.5, height: 0),
-            _ProfileMenuItem(
-              label: '신체 정보 수정',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ProfileBodyScreen(
-                      nickname: userProfile.nickname,
-                      email: userProfile.email,
-                      height: userProfile.height,
-                      weight: userProfile.weight,
-                      armspan: userProfile.armspan,
-                      inseam: userProfile.inseam,
-                    ),
-                  ),
-                );
-              },
-            ),
-            Divider(color: AppColors.signature.darkest, thickness: 0.5, height: 0),
-          ],
-        ),
       ),
       bottomNavigationBar: CustomTabBar(
         selectedIndex: selectedTabIndex,

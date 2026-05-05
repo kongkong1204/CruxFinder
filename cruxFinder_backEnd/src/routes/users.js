@@ -33,6 +33,7 @@ router.get('/me', authenticate, async (req, res) => {
       height: user.height,
       weight: user.weight,
       armReach: user.armReach,
+      inseam: user.inseam,
     });
   } catch (err) {
     res.status(500).json({ message: '서버 오류' });
@@ -84,20 +85,22 @@ router.patch('/me', authenticate, async (req, res) => {
 // 신체 정보 수정
 router.patch('/me/body', authenticate, async (req, res) => {
   try {
-    const { height, weight, armReach } = req.body;
-    if (height === undefined && weight === undefined && armReach === undefined)
+    const { height, weight, armReach, inseam } = req.body;
+    if (height === undefined && weight === undefined && armReach === undefined && inseam === undefined)
       return res.status(400).json({ message: '수정할 항목을 입력해주세요.' });
 
     const data = {};
     if (height !== undefined) data.height = parseFloat(height);
     if (weight !== undefined) data.weight = parseFloat(weight);
     if (armReach !== undefined) data.armReach = parseFloat(armReach);
+    if (inseam !== undefined) data.inseam = parseFloat(inseam);
 
     const updated = await prisma.user.update({ where: { id: req.user.id }, data });
     res.json({
       height: updated.height,
       weight: updated.weight,
       armReach: updated.armReach,
+      inseam: updated.inseam,
     });
   } catch (err) {
     res.status(500).json({ message: '서버 오류' });

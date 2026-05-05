@@ -1,11 +1,12 @@
 // lib/screens/ProfileBody.dart
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:dio/dio.dart';
 
 import '../components/TextField.dart';
 import '../components/ButtonPrimary.dart';
+import '../services/api_service.dart';
 import '../styles/colors.dart';
 import '../styles/fonts.dart';
 
@@ -14,7 +15,7 @@ class ProfileBodyScreen extends StatefulWidget {
   final String email;
   final String height;
   final String weight;
-  final String armspan;
+  final String armReach;
   final String inseam;
 
   const ProfileBodyScreen({
@@ -23,7 +24,7 @@ class ProfileBodyScreen extends StatefulWidget {
     required this.email,
     required this.height,
     required this.weight,
-    required this.armspan,
+    required this.armReach,
     required this.inseam,
   });
 
@@ -34,7 +35,7 @@ class ProfileBodyScreen extends StatefulWidget {
 class _ProfileBodyScreenState extends State<ProfileBodyScreen> {
   late final TextEditingController _heightController;
   late final TextEditingController _weightController;
-  late final TextEditingController _armspanController;
+  late final TextEditingController _armReachController;
   late final TextEditingController _inseamController;
 
   bool isLoading = false;
@@ -44,24 +45,45 @@ class _ProfileBodyScreenState extends State<ProfileBodyScreen> {
     super.initState();
     _heightController = TextEditingController(text: widget.height);
     _weightController = TextEditingController(text: widget.weight);
-    _armspanController = TextEditingController(text: widget.armspan);
+    _armReachController = TextEditingController(text: widget.armReach);
     _inseamController = TextEditingController(text: widget.inseam);
   }
 
+  double? _parse(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return null;
+    return double.tryParse(trimmed);
+  }
+
   Future<void> _onSave() async {
+    if (isLoading) return;
     setState(() => isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
-    // TODO: 저장 API 연동
-    if (!mounted) return;
-    setState(() => isLoading = false);
-    Navigator.pop(context);
+    try {
+      await ApiService().updateBodyInfo(
+        height: _parse(_heightController.text),
+        weight: _parse(_weightController.text),
+        armReach: _parse(_armReachController.text),
+        inseam: _parse(_inseamController.text),
+      );
+      if (!mounted) return;
+      Navigator.pop(context);
+    } on DioException catch (e) {
+      if (!mounted) return;
+      final message = e.response?.data['message'] ?? '저장 실패';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('오류: $e')));
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
   }
 
   @override
   void dispose() {
     _heightController.dispose();
     _weightController.dispose();
-    _armspanController.dispose();
+    _armReachController.dispose();
     _inseamController.dispose();
     super.dispose();
   }
@@ -85,7 +107,6 @@ class _ProfileBodyScreenState extends State<ProfileBodyScreen> {
               ),
             ),
             const SizedBox(height: 24),
-
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
@@ -128,9 +149,7 @@ class _ProfileBodyScreenState extends State<ProfileBodyScreen> {
                 ],
               ),
             ),
-
             const SizedBox(height: 32),
-
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -140,57 +159,51 @@ class _ProfileBodyScreenState extends State<ProfileBodyScreen> {
                     CustomTextField(
                       label: '키',
                       controller: _heightController,
-                      placeholder: 'text',
+                      placeholder: 'cm',
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     ),
                     const SizedBox(height: 20),
-
                     CustomTextField(
                       label: '체중',
                       controller: _weightController,
-                      placeholder: 'text',
+                      placeholder: 'kg',
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     ),
                     const SizedBox(height: 20),
-
                     CustomTextField(
                       label: '암리치',
-                      controller: _armspanController,
-                      placeholder: 'text',
+                      controller: _armReachController,
+                      placeholder: 'cm',
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     ),
                     const SizedBox(height: 20),
-
                     CustomTextField(
                       label: '인심',
                       controller: _inseamController,
-                      placeholder: 'text',
+                      placeholder: 'cm',
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     ),
-
                     const SizedBox(height: 40),
                   ],
                 ),
               ),
             ),
-
-            // 저장 버튼
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               child: isLoading
                   ? const SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: Center(child: CircularProgressIndicator()),
-              )
+                      width: double.infinity,
+                      height: 48,
+                      child: Center(child: CircularProgressIndicator()),
+                    )
                   : ButtonPrimary(
-                text: '저장',
-                onPressed: _onSave,
-              ),
+                      text: '저장',
+                      onPressed: _onSave,
+                    ),
             ),
           ],
         ),

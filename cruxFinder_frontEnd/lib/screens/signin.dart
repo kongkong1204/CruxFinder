@@ -4,8 +4,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 
+import 'package:dio/dio.dart';
+
 import '../components/ButtonPrimary.dart';
 import '../components/TextField.dart';
+import '../services/api_service.dart';
 import '../styles/colors.dart';
 import '../styles/fonts.dart';
 
@@ -20,6 +23,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController =
   TextEditingController(text: 'crux@finder.com');
   final TextEditingController _passwordController = TextEditingController();
+
+  bool _isLoading = false;
 
   bool get _canLogin =>
       _emailController.text.trim().isNotEmpty &&
@@ -45,21 +50,32 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _onTapLogin() {
-    if (!_canLogin) return;
-
-    debugPrint('email: ${_emailController.text.trim()}');
-    debugPrint('password: ${_passwordController.text.trim()}');
-
-    // TODO: 로그인 API 연결
+  Future<void> _onTapLogin() async {
+    if (!_canLogin || _isLoading) return;
+    setState(() => _isLoading = true);
+    try {
+      await ApiService().login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/feed');
+    } on DioException catch (e) {
+      if (!mounted) return;
+      final message = e.response?.data['message'] ?? '로그인 실패';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('오류: $e')));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
-  void _onTapForgotPassword() {
-    debugPrint('비밀번호 찾기 화면 이동');
-  }
+  void _onTapForgotPassword() {}
 
   void _onTapSignUp() {
-    debugPrint('회원가입 화면 이동');
+    Navigator.pushNamed(context, '/signup');
   }
 
   @override
@@ -108,7 +124,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 36),
 
               ButtonPrimary(
-                text: '로그인',
+                text: _isLoading ? '로그인 중...' : '로그인',
                 onPressed: _onTapLogin,
               ),
               const SizedBox(height: 14),

@@ -3,9 +3,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import 'package:dio/dio.dart';
+
 import '../components/ButtonPrimary.dart';
 import '../components/DropDown.dart';
 import '../components/TabBar.dart';
+import '../services/api_service.dart';
 import '../styles/colors.dart';
 import '../styles/fonts.dart';
 
@@ -173,49 +176,24 @@ class _FeedEditScreenState extends State<FeedEditScreen> {
     });
 
     try {
-      final requestBody = {
-        'feedId': widget.feedId,
-        'memo': _memoController.text.trim(),
-        'climbedAt': _selectedDateTime.toIso8601String(),
-        'vGrade': _selectedVGrade,
-        'myDifficulty': _selectedMyDifficulty,
-        'keepExistingImage': _existingImageUrl != null && !_removeExistingImage,
-        'removeExistingImage': _removeExistingImage,
-        'hasImage': _hasImage,
-      };
-
-      debugPrint('UPDATE FEED');
-      debugPrint(requestBody.toString());
-
-      // TODO:
-      // await feedRepository.updateFeed(
-      //   feedId: widget.feedId,
-      //   requestBody: requestBody,
-      // );
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('피드가 수정되었어요.'),
-        ),
+      await ApiService().updateFeed(
+        feedId: widget.feedId,
+        memo: _memoController.text.trim(),
+        climbedAt: _selectedDateTime,
+        vGrade: _selectedVGrade,
+        myDifficulty: _selectedMyDifficulty,
       );
-
+      if (!mounted) return;
       Navigator.pop(context, true);
+    } on DioException catch (e) {
+      if (!mounted) return;
+      final message = e.response?.data['message'] ?? '수정 실패';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
       if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('수정 중 오류가 발생했어요: $e'),
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('오류: $e')));
     } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _isSubmitting = false;
-      });
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 

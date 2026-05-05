@@ -103,11 +103,13 @@ class ApiService {
     double? height,
     double? weight,
     double? armReach,
+    double? inseam,
   }) async {
     final response = await _dio.patch('/users/me/body', data: {
       if (height != null) 'height': height,
       if (weight != null) 'weight': weight,
       if (armReach != null) 'armReach': armReach,
+      if (inseam != null) 'inseam': inseam,
     });
     return response.data;
   }

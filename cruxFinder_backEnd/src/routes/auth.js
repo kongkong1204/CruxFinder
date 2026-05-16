@@ -128,12 +128,22 @@ router.post('/forgot-password', async (req, res) => {
 
     resetCodes[email] = {
       code,
-      expire: Date.now() + 60000
+      expire: Date.now() + 5 * 60 * 1000,
     };
 
-    console.log(`비밀번호 재설정 인증코드 (${email}):`, code);
-
-    res.json({ message: '인증코드가 전송되었습니다.' });
+    const transporter = createTransporter();
+    if (transporter) {
+      await transporter.sendMail({
+        from: process.env.SMTP_USER,
+        to: email,
+        subject: '[CruxFinder] 비밀번호 재설정 코드',
+        text: `인증 코드: ${code}\n5분 이내에 입력해주세요.`,
+      });
+      res.json({ message: '인증코드가 전송되었습니다.' });
+    } else {
+      console.log(`비밀번호 재설정 인증코드 (${email}):`, code);
+      res.json({ message: '인증코드가 전송되었습니다. (개발 모드)', devCode: code });
+    }
   } catch (err) {
     res.status(500).json({ message: '서버 오류' });
   }

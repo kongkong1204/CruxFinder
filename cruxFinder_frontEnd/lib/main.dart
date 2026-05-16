@@ -4,6 +4,7 @@ import 'package:crux_finder/screens/Signin.dart' show LoginScreen;
 import 'package:crux_finder/screens/Signup.dart' show SignUpScreen;
 import 'package:crux_finder/screens/Home.dart';
 import 'package:crux_finder/screens/SolutionTag.dart';
+import 'package:crux_finder/screens/ForgotPassword.dart';
 
 void main() {
   runApp(const MyApp());
@@ -26,6 +27,8 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => const SignUpScreen());
           case '/feed':
             return MaterialPageRoute(builder: (_) => const HomeScreen());
+          case '/forgot-password':
+            return MaterialPageRoute(builder: (_) => const ForgotPasswordScreen());
           default:
             return MaterialPageRoute(builder: (_) => const SplashScreen());
         }

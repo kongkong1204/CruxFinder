@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -159,5 +160,30 @@ class ApiService {
 
   Future<void> deleteFeed(int feedId) async {
     await _dio.delete('/feeds/$feedId');
+  }
+
+  // ── Analysis ──────────────────────────────────────────
+
+  Future<Map<String, dynamic>> analyzeImage(String filePath) async {
+    final formData = FormData.fromMap({
+      'image': await MultipartFile.fromFile(filePath, filename: 'climbing.jpg'),
+    });
+    final response = await _dio.post('/analysis/upload', data: formData);
+    return response.data;
+  }
+
+  // ── Password Reset ────────────────────────────────────
+
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    final response = await _dio.post('/auth/forgot-password', data: {'email': email});
+    return response.data;
+  }
+
+  Future<void> verifyResetCode(String email, String code) async {
+    await _dio.post('/auth/verify-reset-code', data: {'email': email, 'code': code});
+  }
+
+  Future<void> resetPassword(String email, String newPassword) async {
+    await _dio.post('/auth/reset-password', data: {'email': email, 'newPassword': newPassword});
   }
 }

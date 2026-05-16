@@ -5,8 +5,6 @@ import healthRouter from './routes/health.js';
 import usersRouter from './routes/users.js';
 import authRouter from './routes/auth.js';
 import feedsRouter from './routes/feeds.js';
-import { authenticate } from './middlewares/auth.js';
-import mypageRouter from './routes/mypage.js';
 import analysisRouter from './routes/analysis.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -19,14 +17,9 @@ app.use(express.static('public'));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.use('/health', healthRouter);
-app.use('/users', usersRouter);
 app.use('/auth', authRouter);
-app.use('/api/mypage', mypageRouter);
+app.use('/users', usersRouter);
 app.use('/feeds', feedsRouter);
 app.use('/analysis', analysisRouter);
-
-app.get('/mypage', (req, res) => {
-  res.sendFile('mypage.html', { root: 'public' });
-});
 
 export default app;

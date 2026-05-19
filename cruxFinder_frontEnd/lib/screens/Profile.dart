@@ -112,14 +112,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           children: [
                             Text(
                               nickname,
-                              style: AppFonts.bold.xs.copyWith(
+                              style: AppFonts.bold.xl.copyWith(
                                 color: AppColors.dark.darkest,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               email,
-                              style: AppFonts.bold.xl.copyWith(
+                              style: AppFonts.bold.xs.copyWith(
                                 color: AppColors.dark.darkest,
                               ),
                             ),

@@ -20,8 +20,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _emailController =
-  TextEditingController(text: 'crux@finder.com');
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   bool _isLoading = false;
@@ -85,8 +84,9 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: AppColors.light.lightest,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.only(top: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(

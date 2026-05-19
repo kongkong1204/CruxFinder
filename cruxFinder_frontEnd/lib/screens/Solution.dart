@@ -29,7 +29,7 @@ class _SolutionScreenState extends State<SolutionScreen> {
   // 벽 경사각
   String _selectedWallAngle = '수직';
   final List<String> _wallAngleItems = [
-    '슬랩', '수직', '오버행', '심한 오버행',
+    '수직',
   ];
 
   void _onSelectMainImage() {
@@ -170,90 +170,6 @@ class _SolutionScreenState extends State<SolutionScreen> {
                       ],
                     ),
 
-                    const SizedBox(height: 28),
-
-                    // 추가 사진 섹션
-                    Text(
-                      '최적의 솔루션을 찾기위해\n문제의 사진을 추가해 주세요',
-                      style: AppFonts.bold.xl.copyWith(
-                        color: AppColors.dark.darkest,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // 추가된 사진 목록
-                    if (_additionalImages.isNotEmpty) ...[
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _additionalImages.length,
-                        itemBuilder: (context, index) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: Stack(
-                              children: [
-                                Container(
-                                  width: double.infinity,
-                                  height: 120,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.light.light,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: AppColors.light.darkest,
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    '추가 사진 ${index + 1}',
-                                    style: AppFonts.regular.m.copyWith(
-                                      color: AppColors.dark.darkest,
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  top: 8,
-                                  right: 8,
-                                  child: GestureDetector(
-                                    onTap: () => _onRemoveAdditionalImage(index),
-                                    child: Container(
-                                      width: 28,
-                                      height: 28,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.dark.darkest.withValues(alpha: 0.6),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        Icons.close,
-                                        color: AppColors.light.lightest,
-                                        size: 16,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-
-                    if (_additionalImages.length < 5)
-                      ButtonSecondary(
-                        text: '사진 추가',
-                        onPressed: _onAddAdditionalImage,
-                      ),
-
-                    if (_additionalImages.length >= 5)
-                      Center(
-                        child: Text(
-                          '추가 사진은 최대 5장까지 가능해요',
-                          style: AppFonts.regular.s.copyWith(
-                            color: AppColors.dark.lightest,
-                          ),
-                        ),
-                      ),
-
                     const SizedBox(height: 40),
 
                     ButtonPrimary(
@@ -262,12 +178,9 @@ class _SolutionScreenState extends State<SolutionScreen> {
                         debugPrint('mainImage: $_hasMainImage');
                         debugPrint('wallHeight: $_selectedWallHeight');
                         debugPrint('wallAngle: $_selectedWallAngle');
-                        debugPrint('additionalImages: ${_additionalImages.length}장');
                         // TODO: 다음 화면 이동
                       },
                     ),
-
-                    const SizedBox(height: 24),
                   ],
                 ),
               ),

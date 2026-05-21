@@ -47,3 +47,6 @@ claude.log
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
+
+# Uploaded files
+cruxFinder_backEnd/uploads/

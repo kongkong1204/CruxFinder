@@ -10,52 +10,20 @@ import '../styles/colors.dart';
 import '../styles/fonts.dart';
 import '../components/ButtonPrimary.dart';
 import '../components/ButtonSecondary.dart';
-
-class Hold {
-  final String id;
-  final double x;
-  final double y;
-  final double width;
-  final double height;
-  final double confidence;
-
-  const Hold({
-    required this.id,
-    required this.x,
-    required this.y,
-    required this.width,
-    required this.height,
-    required this.confidence,
-  });
-
-  factory Hold.fromJson(Map<String, dynamic> json) => Hold(
-        id: json['id'].toString(),
-        x: (json['x'] as num).toDouble(),
-        y: (json['y'] as num).toDouble(),
-        width: (json['width'] as num).toDouble(),
-        height: (json['height'] as num).toDouble(),
-        confidence: (json['confidence'] as num).toDouble(),
-      );
-}
-
-class AnalysisResult {
-  final String imageUrl;
-  final double imageWidth;
-  final double imageHeight;
-  final List<Hold> holds;
-  final bool isDev;
-
-  const AnalysisResult({
-    required this.imageUrl,
-    required this.imageWidth,
-    required this.imageHeight,
-    required this.holds,
-    required this.isDev,
-  });
-}
+import '../models/analysis.dart';
+import 'SolutionTag.dart';
 
 class AnalysisUploadScreen extends StatefulWidget {
-  const AnalysisUploadScreen({super.key});
+  final File? initialImage;
+  final String wallHeight;
+  final String wallAngle;
+
+  const AnalysisUploadScreen({
+    super.key,
+    this.initialImage,
+    this.wallHeight = '300cm',
+    this.wallAngle = '수직',
+  });
 
   @override
   State<AnalysisUploadScreen> createState() => _AnalysisUploadScreenState();
@@ -64,9 +32,15 @@ class AnalysisUploadScreen extends StatefulWidget {
 class _AnalysisUploadScreenState extends State<AnalysisUploadScreen> {
   final _picker = ImagePicker();
 
-  File? _selectedImage;
+  late File? _selectedImage;
   bool _isAnalyzing = false;
   AnalysisResult? _result;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedImage = widget.initialImage;
+  }
 
   Future<void> _pickImage(ImageSource source) async {
     final picked = await _picker.pickImage(source: source, imageQuality: 90);
@@ -110,7 +84,11 @@ class _AnalysisUploadScreenState extends State<AnalysisUploadScreen> {
     if (_selectedImage == null || _isAnalyzing) return;
     setState(() => _isAnalyzing = true);
     try {
-      final data = await ApiService().analyzeImage(_selectedImage!.path);
+      final data = await ApiService().analyzeImage(
+        _selectedImage!.path,
+        wallHeight: widget.wallHeight,
+        wallAngle: widget.wallAngle,
+      );
       if (!mounted) return;
       final holds = (data['holds'] as List)
           .map((h) => Hold.fromJson(h as Map<String, dynamic>))
@@ -125,6 +103,7 @@ class _AnalysisUploadScreenState extends State<AnalysisUploadScreen> {
         );
       });
       if (_result!.isDev) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('[개발] Roboflow 미연동 — 더미 홀드 표시 중')),
         );
@@ -139,6 +118,19 @@ class _AnalysisUploadScreenState extends State<AnalysisUploadScreen> {
     } finally {
       if (mounted) setState(() => _isAnalyzing = false);
     }
+  }
+
+  void _goToSolutionTag() {
+    if (_result == null || _selectedImage == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SolutionTagScreen(
+          imageFile: _selectedImage!,
+          result: _result!,
+        ),
+      ),
+    );
   }
 
   @override
@@ -176,6 +168,14 @@ class _AnalysisUploadScreenState extends State<AnalysisUploadScreen> {
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
+                  if (_result != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: ButtonPrimary(
+                        text: '다음',
+                        onPressed: _goToSolutionTag,
+                      ),
+                    ),
                   if (_selectedImage != null && _result == null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
@@ -289,12 +289,12 @@ class _HoldOverlayPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final boxPaint = Paint()
-      ..color = const Color(0xFF4AD66D).withOpacity(0.85)
+      ..color = const Color(0xFF4AD66D).withValues(alpha: 0.85)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
 
     final fillPaint = Paint()
-      ..color = const Color(0xFF4AD66D).withOpacity(0.15)
+      ..color = const Color(0xFF4AD66D).withValues(alpha: 0.15)
       ..style = PaintingStyle.fill;
 
     for (final hold in holds) {

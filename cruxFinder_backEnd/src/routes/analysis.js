@@ -1,36 +1,12 @@
 import { Router } from 'express';
 import { createRequire } from 'module';
 import { authenticate } from '../middlewares/auth.js';
+import { upload } from '../middlewares/upload.js';
 import prisma from '../lib/prisma.js';
-import path from 'path';
 import fs from 'fs';
-import { fileURLToPath } from 'url';
 
 const require = createRequire(import.meta.url);
-const multer = require('multer');
 const axios = require('axios');
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const uploadDir = path.join(__dirname, '../../uploads');
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${Date.now()}${ext}`);
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 20 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (!file.mimetype.startsWith('image/')) {
-      return cb(new Error('이미지 파일만 업로드 가능합니다.'));
-    }
-    cb(null, true);
-  },
-});
 
 const router = Router();
 

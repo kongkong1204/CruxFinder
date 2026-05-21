@@ -29,33 +29,73 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   bool _isLoading = false;
   String _email = '';
 
+  static final _emailRegex =
+      RegExp(r'^[\w.+\-]+@[\w\-]+\.[a-zA-Z]{2,}$');
+
+  static bool _isValidPassword(String pw) =>
+      pw.length >= 8 &&
+      pw.contains(RegExp(r'[a-zA-Z]')) &&
+      pw.contains(RegExp(r'[0-9]'));
+
+  bool get _canProceed {
+    switch (_step) {
+      case _Step.email:
+        return _emailRegex.hasMatch(_emailController.text.trim());
+      case _Step.code:
+        return _codeController.text.trim().length == 6;
+      case _Step.newPassword:
+        final pw = _passwordController.text;
+        return _isValidPassword(pw) &&
+            pw == _passwordConfirmController.text;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController.addListener(_refresh);
+    _codeController.addListener(_refresh);
+    _passwordController.addListener(_refresh);
+    _passwordConfirmController.addListener(_refresh);
+  }
+
+  void _refresh() => setState(() {});
+
   @override
   void dispose() {
-    _emailController.dispose();
-    _codeController.dispose();
-    _passwordController.dispose();
-    _passwordConfirmController.dispose();
+    _emailController
+      ..removeListener(_refresh)
+      ..dispose();
+    _codeController
+      ..removeListener(_refresh)
+      ..dispose();
+    _passwordController
+      ..removeListener(_refresh)
+      ..dispose();
+    _passwordConfirmController
+      ..removeListener(_refresh)
+      ..dispose();
     super.dispose();
   }
 
   Future<void> _sendCode() async {
-    final email = _emailController.text.trim();
-    if (email.isEmpty || _isLoading) return;
+    if (!_canProceed || _isLoading) return;
     setState(() => _isLoading = true);
     try {
-      final res = await ApiService().forgotPassword(email);
+      final res = await ApiService().forgotPassword(_emailController.text.trim());
       if (!mounted) return;
-      _email = email;
+      _email = _emailController.text.trim();
       setState(() => _step = _Step.code);
-      if (res['devCode'] != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('[개발] 인증코드: ${res['devCode']}')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('인증코드가 이메일로 발송됐습니다.')),
-        );
-      }
+      final devCode = res['devCode'];
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            devCode != null
+                ? '[개발] 인증코드: $devCode'
+                : '인증코드가 이메일로 발송됐습니다.',
+          ),
+        ),
+      );
     } on DioException catch (e) {
       if (!mounted) return;
       final message = e.response?.data['message'] ?? '오류가 발생했습니다.';
@@ -66,11 +106,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> _verifyCode() async {
-    final code = _codeController.text.trim();
-    if (code.isEmpty || _isLoading) return;
+    if (!_canProceed || _isLoading) return;
     setState(() => _isLoading = true);
     try {
-      await ApiService().verifyResetCode(_email, code);
+      await ApiService().verifyResetCode(_email, _codeController.text.trim());
       if (!mounted) return;
       setState(() => _step = _Step.newPassword);
     } on DioException catch (e) {
@@ -83,18 +122,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> _resetPassword() async {
-    final password = _passwordController.text.trim();
-    final confirm = _passwordConfirmController.text.trim();
-    if (password.isEmpty || _isLoading) return;
-    if (password != confirm) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('비밀번호가 일치하지 않습니다.')),
-      );
-      return;
-    }
+    if (!_canProceed || _isLoading) return;
     setState(() => _isLoading = true);
     try {
-      await ApiService().resetPassword(_email, password);
+      await ApiService().resetPassword(_email, _passwordController.text);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('비밀번호가 변경됐습니다. 다시 로그인해주세요.')),
@@ -122,6 +153,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               const SizedBox(height: 48),
               GestureDetector(
                 onTap: () => Navigator.pop(context),
+                behavior: HitTestBehavior.opaque,
                 child: const Icon(Icons.arrow_back, size: 24),
               ),
               const SizedBox(height: 32),
@@ -139,7 +171,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               const SizedBox(height: 36),
               ButtonPrimary(
                 text: _isLoading ? '처리 중...' : _buttonLabel,
-                onPressed: _isLoading ? () {} : _onTapNext,
+                onPressed: (_canProceed && !_isLoading) ? _onTapNext : null,
               ),
               const SizedBox(height: 24),
             ],
@@ -204,6 +236,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           const SizedBox(height: 12),
           GestureDetector(
             onTap: _isLoading ? null : _sendCode,
+            behavior: HitTestBehavior.opaque,
             child: Text(
               '코드 재발송',
               style: AppFonts.regular.m.copyWith(color: AppColors.signature.darkest),
@@ -211,6 +244,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
         ];
       case _Step.newPassword:
+        final pw = _passwordController.text;
+        final confirm = _passwordConfirmController.text;
+        final showMatch = confirm.isNotEmpty;
+        final isMatch = pw == confirm;
         return [
           CustomTextField(
             label: '새 비밀번호 (8자리 이상 영문+숫자)',
@@ -225,6 +262,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             controller: _passwordConfirmController,
             obscureText: true,
           ),
+          if (showMatch) ...[
+            const SizedBox(height: 8),
+            Text(
+              isMatch ? '비밀번호가 일치합니다.' : '비밀번호가 일치하지 않습니다.',
+              style: AppFonts.regular.m.copyWith(
+                color: isMatch ? Colors.green : Colors.red,
+              ),
+            ),
+          ],
         ];
     }
   }

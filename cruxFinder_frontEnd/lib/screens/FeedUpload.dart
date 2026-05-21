@@ -44,12 +44,39 @@ class _FeedUploadScreenState extends State<FeedUploadScreen> {
     '6', '7', '8', '9', '10',
   ];
 
-  Future<void> _pickImage() async {
+  void _showPickerSheet() {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('갤러리에서 선택'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('카메라로 촬영'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() => _selectedImage = File(picked.path));
-    }
+    final picked = await picker.pickImage(source: source, imageQuality: 85);
+    if (picked != null) setState(() => _selectedImage = File(picked.path));
   }
 
   Future<void> _submitUpload() async {
@@ -61,6 +88,7 @@ class _FeedUploadScreenState extends State<FeedUploadScreen> {
         climbedAt: _selectedDateTime,
         vGrade: _selectedVGrade,
         myDifficulty: _selectedMyDifficulty,
+        imagePath: _selectedImage?.path,
       );
       if (!mounted) return;
       Navigator.pop(context);
@@ -178,7 +206,7 @@ class _FeedUploadScreenState extends State<FeedUploadScreen> {
                   children: [
                     _UploadImageSection(
                       selectedImage: _selectedImage,
-                      onTapChangePhoto: _pickImage,
+                      onTapChangePhoto: _showPickerSheet,
                     ),
                     const SizedBox(height: 18),
 

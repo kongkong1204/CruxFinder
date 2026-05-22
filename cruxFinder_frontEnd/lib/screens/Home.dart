@@ -9,6 +9,7 @@ import '../services/api_service.dart';
 import '../styles/colors.dart';
 import '../styles/fonts.dart';
 import 'FeedEdit.dart';
+import 'Solution.dart';
 
 class FeedItem {
   final int id;
@@ -233,7 +234,15 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              child: ButtonPrimary(text: '시작하기', onPressed: () {}),
+              child: ButtonPrimary(
+                text: '시작하기',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SolutionScreen()),
+                  );
+                },
+              ),
             ),
           ],
         ),

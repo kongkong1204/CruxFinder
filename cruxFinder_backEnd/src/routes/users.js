@@ -68,8 +68,8 @@ router.patch('/me', authenticate, async (req, res) => {
     const data = {};
     if (nickname) data.nickname = nickname;
     if (newPassword) {
-      if (!/^(?=.*[A-Za-z])(?=.*\d).+$/.test(newPassword))
-        return res.status(400).json({ message: '비밀번호는 영문과 숫자를 모두 포함해야 합니다.' });
+      if (!/^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(newPassword))
+        return res.status(400).json({ message: '비밀번호는 8자 이상 영문과 숫자를 모두 포함해야 합니다.' });
       data.password = await bcrypt.hash(newPassword, 10);
     }
 
@@ -107,6 +107,25 @@ router.patch('/me/body', authenticate, async (req, res) => {
   }
 });
 
+// 계정 탈퇴
+router.delete('/me', authenticate, async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password) return res.status(400).json({ message: '비밀번호를 입력해주세요.' });
+
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ message: '비밀번호가 일치하지 않습니다.' });
+
+    await prisma.user.delete({ where: { id: req.user.id } });
+    res.json({ message: '계정이 삭제되었습니다.' });
+  } catch (err) {
+    res.status(500).json({ message: '서버 오류' });
+  }
+});
+
 // 회원가입
 router.post('/', async (req, res) => {
   try {
@@ -115,8 +134,8 @@ router.post('/', async (req, res) => {
     if (!nickname) return res.status(400).json({ message: '닉네임은 필수입니다.' });
     if (!password) return res.status(400).json({ message: '비밀번호는 필수입니다.' });
 
-    if (!/^(?=.*[A-Za-z])(?=.*\d).+$/.test(password))
-      return res.status(400).json({ message: '비밀번호는 영문과 숫자를 모두 포함해야 합니다.' });
+    if (!/^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(password))
+      return res.status(400).json({ message: '비밀번호는 8자 이상 영문과 숫자를 모두 포함해야 합니다.' });
 
     const hashed = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({

@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 class ApiService {
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
@@ -131,13 +130,21 @@ class ApiService {
     required DateTime climbedAt,
     required String vGrade,
     required String myDifficulty,
+    String? imagePath,
   }) async {
-    final response = await _dio.post('/feeds', data: {
+    final fields = {
       'memo': memo,
       'climbedAt': climbedAt.toIso8601String(),
       'vGrade': vGrade,
       'myDifficulty': myDifficulty,
-    });
+    };
+    final data = imagePath != null
+        ? FormData.fromMap({
+            ...fields,
+            'image': await MultipartFile.fromFile(imagePath, filename: 'feed.jpg'),
+          })
+        : fields;
+    final response = await _dio.post('/feeds', data: data);
     return response.data;
   }
 
@@ -147,17 +154,58 @@ class ApiService {
     required DateTime climbedAt,
     required String vGrade,
     required String myDifficulty,
+    String? imagePath,
+    bool removeImage = false,
   }) async {
-    final response = await _dio.patch('/feeds/$feedId', data: {
+    final fields = <String, dynamic>{
       'memo': memo,
       'climbedAt': climbedAt.toIso8601String(),
       'vGrade': vGrade,
       'myDifficulty': myDifficulty,
-    });
+      if (removeImage && imagePath == null) 'removeImage': 'true',
+    };
+    final data = imagePath != null
+        ? FormData.fromMap({
+            ...fields,
+            'image': await MultipartFile.fromFile(imagePath, filename: 'feed.jpg'),
+          })
+        : fields;
+    final response = await _dio.patch('/feeds/$feedId', data: data);
     return response.data;
   }
 
   Future<void> deleteFeed(int feedId) async {
     await _dio.delete('/feeds/$feedId');
+  }
+
+  // ── Analysis ──────────────────────────────────────────
+
+  Future<Map<String, dynamic>> analyzeImage(
+    String filePath, {
+    String? wallHeight,
+    String? wallAngle,
+  }) async {
+    final formData = FormData.fromMap({
+      'image': await MultipartFile.fromFile(filePath, filename: 'climbing.jpg'),
+      if (wallHeight != null) 'wallHeight': wallHeight,
+      if (wallAngle != null) 'wallAngle': wallAngle,
+    });
+    final response = await _dio.post('/analysis/upload', data: formData);
+    return response.data;
+  }
+
+  // ── Password Reset ────────────────────────────────────
+
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    final response = await _dio.post('/auth/forgot-password', data: {'email': email});
+    return response.data;
+  }
+
+  Future<void> verifyResetCode(String email, String code) async {
+    await _dio.post('/auth/verify-reset-code', data: {'email': email, 'code': code});
+  }
+
+  Future<void> resetPassword(String email, String newPassword) async {
+    await _dio.post('/auth/reset-password', data: {'email': email, 'newPassword': newPassword});
   }
 }

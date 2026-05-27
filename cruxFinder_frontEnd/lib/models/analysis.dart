@@ -4,7 +4,6 @@ class Hold {
   final double y;
   final double width;
   final double height;
-  final double confidence;
 
   const Hold({
     required this.id,
@@ -12,7 +11,6 @@ class Hold {
     required this.y,
     required this.width,
     required this.height,
-    required this.confidence,
   });
 
   factory Hold.fromJson(Map<String, dynamic> json) => Hold(
@@ -21,11 +19,11 @@ class Hold {
         y: (json['y'] as num).toDouble(),
         width: (json['width'] as num).toDouble(),
         height: (json['height'] as num).toDouble(),
-        confidence: (json['confidence'] as num).toDouble(),
       );
 }
 
 class AnalysisResult {
+  final int routeId;        // 추가
   final String imageUrl;
   final double imageWidth;
   final double imageHeight;
@@ -33,6 +31,7 @@ class AnalysisResult {
   final bool isDev;
 
   const AnalysisResult({
+    required this.routeId,  // 추가
     required this.imageUrl,
     required this.imageWidth,
     required this.imageHeight,

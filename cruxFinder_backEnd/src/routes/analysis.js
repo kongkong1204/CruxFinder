@@ -1,7 +1,10 @@
+// src/routes/analysis.js
+
 import { Router } from 'express';
 import { createRequire } from 'module';
 import { authenticate } from '../middlewares/auth.js';
 import { upload } from '../middlewares/upload.js';
+import { buildTaggedProblemJson, parseRoboflowHolds } from '../utils/holdJsonParser.js';
 import prisma from '../lib/prisma.js';
 import fs from 'fs';
 
@@ -10,6 +13,7 @@ const axios = require('axios');
 
 const router = Router();
 
+// 이미지 업로드 + Roboflow 분석
 router.post('/upload', authenticate, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
@@ -25,7 +29,7 @@ router.post('/upload', authenticate, upload.single('image'), async (req, res) =>
     let holds, imageWidth, imageHeight;
 
     if (!modelId || !apiKey) {
-      // 개발 모드: 더미 홀드 반환
+      // 개발 모드: 더미 홀드 반환 (픽셀 좌표)
       imageWidth = 1080;
       imageHeight = 1920;
       holds = [
@@ -39,25 +43,20 @@ router.post('/upload', authenticate, upload.single('image'), async (req, res) =>
       const imageBase64 = imageBuffer.toString('base64');
 
       const roboflowRes = await axios.post(
-        `https://detect.roboflow.com/${modelId}/${version}`,
-        imageBase64,
-        {
-          params: { api_key: apiKey },
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        }
+          `https://serverless.roboflow.com/${modelId}/${version}`,
+          imageBase64,
+          {
+            params: { api_key: apiKey },
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          }
       );
 
       const { image, predictions } = roboflowRes.data;
       imageWidth = image.width;
       imageHeight = image.height;
-      holds = predictions.map((p, i) => ({
-        id: p.detection_id || String(i),
-        x: p.x,
-        y: p.y,
-        width: p.width,
-        height: p.height,
-        confidence: p.confidence,
-      }));
+
+      // parseRoboflowHolds로 파싱 (픽셀 좌표 그대로 유지)
+      holds = parseRoboflowHolds({ predictions }, imageWidth, imageHeight);
     }
 
     const route = await prisma.climbingRoute.create({
@@ -82,6 +81,82 @@ router.post('/upload', authenticate, upload.single('image'), async (req, res) =>
     if (req.file) fs.unlink(req.file.path, () => {});
     console.error(err);
     res.status(500).json({ message: '분석 중 오류가 발생했습니다.' });
+  }
+});
+
+// 태그 저장 + 최종 데이터셋 생성
+router.post('/tag', authenticate, async (req, res) => {
+  try {
+    const { routeId, holds, wallHeight, wallTags } = req.body;
+
+    // routeId로 이미지 크기 조회
+    const route = await prisma.climbingRoute.findUnique({
+      where: { id: Number(routeId) },
+    });
+
+    if (!route) {
+      return res.status(404).json({ message: '분석 결과를 찾을 수 없습니다.' });
+    }
+
+    if (route.userId !== req.user.id) {
+      return res.status(403).json({ message: '권한이 없습니다.' });
+    }
+
+    // 사용자 신체정보 조회
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        height: true,
+        weight: true,
+        armReach: true,
+        inseam: true,
+      },
+    });
+
+    // 픽셀 좌표 → 정규화 좌표 변환
+    const wallHeightCm = parseInt(wallHeight) || null;
+
+    const normalizedHolds = holds.map((hold) => ({
+      ...hold,
+      x: hold.x / route.imageWidth,
+      y: hold.y / route.imageHeight,
+      width: hold.width / route.imageWidth,
+      height: hold.height / route.imageHeight,
+    }));
+
+    const result = buildTaggedProblemJson({
+      wall: {
+        heightCm: wallHeightCm,
+        imageWidth: route.imageWidth,
+        imageHeight: route.imageHeight,
+        angle: wallTags,
+      },
+      user: {
+        heightCm: user?.height ?? null,
+        armReachCm: user?.armReach ?? null,
+        inseamCm: user?.inseam ?? null,
+        weightKg: user?.weight ?? null,
+      },
+      holds: normalizedHolds,
+    });
+    console.log('result:', JSON.stringify(result, null, 2)); //개발용 json데이터셋 확인
+
+
+    if (!result.ok) {
+      return res.status(400).json({ message: '데이터 검증 실패', errors: result.errors });
+    }
+
+    await prisma.climbingRoute.update({
+      where: { id: Number(routeId) },
+      data: {
+        holds: result.data.holds,
+      },
+    });
+
+    res.json({ ok: true, data: result.data });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: '서버 오류' });
   }
 });
 

@@ -3,14 +3,17 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:dio/dio.dart';
 
 import '../components/ButtonPrimary.dart';
 import '../components/ButtonSecondary.dart';
 import '../components/DropDown.dart';
 import '../components/TabBar.dart';
+import '../services/api_service.dart';
+import '../models/analysis.dart';
 import '../styles/colors.dart';
 import '../styles/fonts.dart';
-import 'AnalysisUpload.dart';
+import 'SolutionTag.dart';
 
 class SolutionScreen extends StatefulWidget {
   const SolutionScreen({super.key});
@@ -22,14 +25,15 @@ class SolutionScreen extends StatefulWidget {
 class _SolutionScreenState extends State<SolutionScreen> {
   final _picker = ImagePicker();
   File? _selectedImage;
+  bool _isAnalyzing = false;
 
   String _selectedWallHeight = '300cm';
   final List<String> _wallHeightItems = [
     '300cm', '350cm', '400cm', '450cm', '500cm',
   ];
 
-  String _selectedWallAngle = '수직';
-  final List<String> _wallAngleItems = ['수직'];
+  String _selectedWallAngle = 'vertical';
+  final List<String> _wallAngleItems = ['slab', 'vertical'];
 
   Future<void> _pickImage(ImageSource source) async {
     final picked = await _picker.pickImage(source: source, imageQuality: 90);
@@ -64,6 +68,70 @@ class _SolutionScreenState extends State<SolutionScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _analyze() async {
+    if (_selectedImage == null || _isAnalyzing) return;
+    setState(() => _isAnalyzing = true);
+
+    try {
+      final data = await ApiService().analyzeImage(
+        _selectedImage!.path,
+        wallHeight: _selectedWallHeight,
+        wallTags: _selectedWallAngle,
+      );
+
+      if (!mounted) return;
+
+      final holds = (data['holds'] as List)
+          .map((h) => Hold.fromJson(h as Map<String, dynamic>))
+          .toList();
+
+      final result = AnalysisResult(
+        routeId: data['routeId'] as int,  // 추가
+        imageUrl: data['imageUrl'] as String,
+        imageWidth: (data['imageWidth'] as num).toDouble(),
+        imageHeight: (data['imageHeight'] as num).toDouble(),
+        holds: holds,
+        isDev: data['dev'] == true,
+      );
+
+      if (result.isDev) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('[개발] Roboflow 미연동 — 더미 홀드 표시 중')),
+        );
+      }
+
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SolutionTagScreen(
+            imageFile: _selectedImage!,
+            result: result,
+            wallHeight: _selectedWallHeight,
+            wallTags: _selectedWallAngle,
+          )
+        ),
+      );
+    } on DioException catch (e) {
+      if (!mounted) return;
+      debugPrint('DioException: ${e.response?.statusCode}');
+      debugPrint('DioException data: ${e.response?.data}');
+      debugPrint('DioException message: ${e.message}');
+      final message = e.response?.data['message'] ?? '분석 실패';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('오류: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isAnalyzing = false);
+    }
   }
 
   @override
@@ -111,19 +179,19 @@ class _SolutionScreenState extends State<SolutionScreen> {
                         ),
                         child: _selectedImage != null
                             ? ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: Image.file(
-                                  _selectedImage!,
-                                  fit: BoxFit.cover,
-                                ),
-                              )
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.file(
+                            _selectedImage!,
+                            fit: BoxFit.cover,
+                          ),
+                        )
                             : Center(
-                                child: Image.asset(
-                                  'assets/icons/photo.png',
-                                  width: 40,
-                                  height: 40,
-                                ),
-                              ),
+                          child: Image.asset(
+                            'assets/icons/photo.png',
+                            width: 40,
+                            height: 40,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -171,22 +239,13 @@ class _SolutionScreenState extends State<SolutionScreen> {
                     const SizedBox(height: 40),
 
                     ButtonPrimary(
-                      text: '다음',
-                      onPressed: _selectedImage == null
+                      text: _isAnalyzing ? '분석 중...' : '다음',
+                      onPressed: _selectedImage == null || _isAnalyzing
                           ? null
-                          : () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => AnalysisUploadScreen(
-                                    initialImage: _selectedImage!,
-                                    wallHeight: _selectedWallHeight,
-                                    wallAngle: _selectedWallAngle,
-                                  ),
-                                ),
-                              );
-                            },
+                          : _analyze,
                     ),
+
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),

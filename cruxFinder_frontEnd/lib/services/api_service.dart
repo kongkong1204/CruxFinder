@@ -8,9 +8,9 @@ class ApiService {
   static const _tokenKey = 'auth_token';
 
   final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'http://10.0.2.2:3000',
-    connectTimeout: const Duration(seconds: 5),
-    receiveTimeout: const Duration(seconds: 5),
+    baseUrl: 'http://localhost:3000',
+    connectTimeout: const Duration(seconds: 30),
+    receiveTimeout: const Duration(seconds: 30),
   ));
 
   Future<void> saveToken(String token) async {
@@ -183,14 +183,31 @@ class ApiService {
   Future<Map<String, dynamic>> analyzeImage(
     String filePath, {
     String? wallHeight,
-    String? wallAngle,
+    String? wallTags,
   }) async {
     final formData = FormData.fromMap({
       'image': await MultipartFile.fromFile(filePath, filename: 'climbing.jpg'),
       if (wallHeight != null) 'wallHeight': wallHeight,
-      if (wallAngle != null) 'wallAngle': wallAngle,
+      if (wallTags != null) 'wallTags': wallTags,
     });
     final response = await _dio.post('/analysis/upload', data: formData);
+    return response.data;
+  }
+
+  // ── saveTag ────────────────────────────────────
+
+  Future<Map<String, dynamic>> saveTaggedHolds({
+    required int routeId,
+    required List<Map<String, dynamic>> holds,
+    required String wallHeight,
+    required String wallTags,
+  }) async {
+    final response = await _dio.post('/analysis/tag', data: {
+      'routeId': routeId,
+      'holds': holds,
+      'wallHeight': wallHeight,
+      'wallTags': wallTags,
+    });
     return response.data;
   }
 

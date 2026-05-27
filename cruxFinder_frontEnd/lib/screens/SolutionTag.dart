@@ -1,10 +1,11 @@
-// lib/screens/SolutionHold.dart
+// lib/screens/SolutionTag.dart
 
 import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../components/ButtonPrimary.dart';
 import '../components/TabBar.dart';
+import '../services/api_service.dart';
 import '../styles/colors.dart';
 import '../styles/fonts.dart';
 import '../models/analysis.dart';
@@ -25,14 +26,14 @@ extension HoldTypeLabel on HoldType {
 }
 
 // 홀드 크기
-enum HoldSize { small, medium, large }
+enum HoldSize { s, m, l }
 
 extension HoldSizeLabel on HoldSize {
   String get label {
     switch (this) {
-      case HoldSize.small: return '소';
-      case HoldSize.medium: return '중';
-      case HoldSize.large: return '대';
+      case HoldSize.s: return '소';
+      case HoldSize.m: return '중';
+      case HoldSize.l: return '대';
     }
   }
 }
@@ -67,11 +68,15 @@ class HoldData {
 class SolutionTagScreen extends StatefulWidget {
   final File imageFile;
   final AnalysisResult result;
+  final String wallHeight;
+  final String wallTags;
 
   const SolutionTagScreen({
     super.key,
     required this.imageFile,
     required this.result,
+    required this.wallHeight,
+    required this.wallTags,
   });
 
   @override
@@ -84,7 +89,6 @@ class _SolutionTagScreenState extends State<SolutionTagScreen> {
   @override
   void initState() {
     super.initState();
-    // Roboflow 픽셀 좌표 그대로 유지 (FittedBox가 스케일 처리)
     _holds = widget.result.holds.asMap().entries.map((entry) {
       final i = entry.key;
       final h = entry.value;
@@ -132,18 +136,9 @@ class _SolutionTagScreenState extends State<SolutionTagScreen> {
             const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: const Icon(Icons.arrow_back, size: 24),
-                  ),
-                  const SizedBox(width: 16),
-                  Text(
-                    'solution',
-                    style: AppFonts.title.T.copyWith(color: AppColors.dark.darkest),
-                  ),
-                ],
+              child: Text(
+                'solution',
+                style: AppFonts.title.T.copyWith(color: AppColors.dark.darkest),
               ),
             ),
             const SizedBox(height: 8),
@@ -156,9 +151,6 @@ class _SolutionTagScreenState extends State<SolutionTagScreen> {
             ),
             const SizedBox(height: 16),
 
-            // 이미지 + 홀드 바운딩 박스
-            // FittedBox로 이미지 좌표계를 그대로 유지 — BoxFit.cover처럼 크롭하면
-            // 홀드 픽셀 좌표와 표시 위치가 어긋나므로 contain 사용
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -177,22 +169,21 @@ class _SolutionTagScreenState extends State<SolutionTagScreen> {
                             height: widget.result.imageHeight,
                             fit: BoxFit.fill,
                           ),
-                          // Positioned로 각 홀드 탭 가능하게 유지
                           ..._holds.map((hold) {
                             final Color borderColor = hold.isStart
                                 ? AppColors.clear.darkest
                                 : hold.isTop
-                                    ? AppColors.error.darkest
-                                    : hold.isSelected
-                                        ? AppColors.signature.darkest
-                                        : AppColors.light.darkest;
+                                ? AppColors.error.darkest
+                                : hold.isSelected
+                                ? AppColors.signature.darkest
+                                : AppColors.light.darkest;
                             final Color fillColor = hold.isStart
                                 ? AppColors.clear.darkest.withValues(alpha: 0.2)
                                 : hold.isTop
-                                    ? AppColors.error.darkest.withValues(alpha: 0.2)
-                                    : hold.isSelected
-                                        ? AppColors.signature.darkest.withValues(alpha: 0.2)
-                                        : Colors.transparent;
+                                ? AppColors.error.darkest.withValues(alpha: 0.2)
+                                : hold.isSelected
+                                ? AppColors.signature.darkest.withValues(alpha: 0.2)
+                                : Colors.transparent;
                             return Positioned(
                               left: hold.x - hold.width / 2,
                               top: hold.y - hold.height / 2,
@@ -224,10 +215,29 @@ class _SolutionTagScreenState extends State<SolutionTagScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               child: ButtonPrimary(
                 text: '다음',
-                onPressed: () {
+                onPressed: () async {
                   final selected = _holds.where((h) => h.isSelected).toList();
-                  debugPrint('선택된 홀드: ${selected.length}개');
-                  // TODO: 다음 화면(솔루션 결과) 이동
+
+                  final holdsData = selected.map((h) => {
+                    'id': h.id,
+                    'x': h.x,
+                    'y': h.y,
+                    'width': h.width,
+                    'height': h.height,
+                    'isSelected': h.isSelected,
+                    'isStart': h.isStart,
+                    'isTop': h.isTop,
+                    'typeTag': h.type?.name,
+                    'sizeTag': h.size?.name,
+                  }).toList();
+
+                  final data = await ApiService().saveTaggedHolds(
+                    routeId: widget.result.routeId,
+                    holds: holdsData,
+                    wallHeight: widget.wallHeight,
+                    wallTags: widget.wallTags,
+                  );
+                  // TODO: 다음 화면으로 이동
                 },
               ),
             ),
@@ -279,7 +289,6 @@ class _TagBottomSheetState extends State<_TagBottomSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 핸들바
           Center(
             child: Container(
               width: 40,
@@ -292,7 +301,6 @@ class _TagBottomSheetState extends State<_TagBottomSheet> {
           ),
           const SizedBox(height: 20),
 
-          // 홀드 타입
           Text(
             '홀드 타입',
             style: AppFonts.bold.xl.copyWith(color: AppColors.dark.darkest),
@@ -337,7 +345,6 @@ class _TagBottomSheetState extends State<_TagBottomSheet> {
 
           const SizedBox(height: 20),
 
-          // 홀드 크기
           Text(
             '홀드 크기',
             style: AppFonts.bold.xl.copyWith(color: AppColors.dark.darkest),
@@ -382,7 +389,6 @@ class _TagBottomSheetState extends State<_TagBottomSheet> {
 
           const SizedBox(height: 20),
 
-          // 시작홀드 / 끝홀드
           Text(
             '홀드 역할',
             style: AppFonts.bold.xl.copyWith(color: AppColors.dark.darkest),

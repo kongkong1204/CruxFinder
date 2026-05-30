@@ -1,11 +1,14 @@
 // lib/screens/FeedEdit.dart
 
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-
 import 'package:dio/dio.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../components/ButtonPrimary.dart';
+import '../components/ButtonSecondary.dart';
 import '../components/DropDown.dart';
 import '../components/TabBar.dart';
 import '../services/api_service.dart';
@@ -35,146 +38,103 @@ class FeedEditScreen extends StatefulWidget {
 }
 
 class _FeedEditScreenState extends State<FeedEditScreen> {
-  final TextEditingController _memoController = TextEditingController();
+  final _memoController = TextEditingController();
+  final _picker = ImagePicker();
 
   late DateTime _selectedDateTime;
   late String _selectedVGrade;
   late String _selectedMyDifficulty;
 
-  int _selectedTabIndex = 3;
+  String? _existingImageUrl;
+  File? _newImageFile;
+  bool _removeImage = false;
   bool _isSubmitting = false;
 
-  String? _existingImageUrl;
-  bool _removeExistingImage = false;
-  bool _hasImage = false;
-
   final List<String> _vGradeItems = [
-    'VB',
-    'V0',
-    'V1',
-    'V2',
-    'V3',
-    'V4',
-    'V5',
-    'V6',
-    'V7',
-    'V8',
-    'V9',
-    'V10+',
+    'VB', 'V0', 'V1', 'V2', 'V3', 'V4',
+    'V5', 'V6', 'V7', 'V8', 'V9', 'V10+',
   ];
 
   final List<String> _myDifficultyItems = [
-    '1',
-    '2',
-    '3',
-    '4',
-    '5',
-    '6',
-    '7',
-    '8',
-    '9',
-    '10'
+    '1', '2', '3', '4', '5',
+    '6', '7', '8', '9', '10',
   ];
 
-  bool get _canSubmit {
-    return _memoController.text.trim().isNotEmpty &&
-        _selectedVGrade != 'text' &&
-        _selectedMyDifficulty != 'text';
-  }
+  bool get _canSubmit =>
+      _memoController.text.trim().isNotEmpty && !_isSubmitting;
+
+  bool get _hasImage =>
+      !_removeImage && (_newImageFile != null || _existingImageUrl != null);
 
   @override
   void initState() {
     super.initState();
-
     _memoController.text = widget.initialMemo;
     _selectedDateTime = widget.initialDateTime;
     _selectedVGrade = widget.initialVGrade;
     _selectedMyDifficulty = widget.initialMyDifficulty;
     _existingImageUrl = widget.initialImageUrl;
-    _hasImage = widget.initialImageUrl != null && widget.initialImageUrl!.isNotEmpty;
-
-    _memoController.addListener(() {
-      setState(() {});
-    });
+    _memoController.addListener(_refresh);
   }
+
+  void _refresh() => setState(() {});
 
   @override
   void dispose() {
-    _memoController.dispose();
+    _memoController
+      ..removeListener(_refresh)
+      ..dispose();
     super.dispose();
   }
 
-  Future<void> _showCupertinoDateTimePicker() async {
-    DateTime tempDate = _selectedDateTime;
-
-    await showCupertinoModalPopup<void>(
+  void _showPickerSheet() {
+    showModalBottomSheet(
       context: context,
-      builder: (_) {
-        return Container(
-          height: 300,
-          color: AppColors.light.lightest,
-          child: Column(
-            children: [
-              Container(
-                height: 52,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    CupertinoButton(
-                      padding: EdgeInsets.zero,
-                      child: const Text('취소'),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    CupertinoButton(
-                      padding: EdgeInsets.zero,
-                      child: const Text('확인'),
-                      onPressed: () {
-                        setState(() {
-                          _selectedDateTime = tempDate;
-                        });
-                        Navigator.pop(context);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: CupertinoDatePicker(
-                  mode: CupertinoDatePickerMode.dateAndTime,
-                  initialDateTime: _selectedDateTime,
-                  use24hFormat: false,
-                  onDateTimeChanged: (value) {
-                    tempDate = value;
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('갤러리에서 선택'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('카메라로 촬영'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  void _onTapChangePhoto() {
+  Future<void> _pickImage(ImageSource source) async {
+    final picked = await _picker.pickImage(source: source, imageQuality: 85);
+    if (picked == null) return;
     setState(() {
-      if (_existingImageUrl != null && _existingImageUrl!.isNotEmpty) {
-        _removeExistingImage = !_removeExistingImage;
-        _hasImage = !_removeExistingImage;
-      } else {
-        _hasImage = !_hasImage;
-      }
+      _newImageFile = File(picked.path);
+      _removeImage = false;
+    });
+  }
+
+  void _onRemoveImage() {
+    setState(() {
+      _newImageFile = null;
+      _removeImage = true;
     });
   }
 
   Future<void> _submitEdit() async {
-    if (!_canSubmit || _isSubmitting) return;
-
-    setState(() {
-      _isSubmitting = true;
-    });
-
+    if (!_canSubmit) return;
+    setState(() => _isSubmitting = true);
     try {
       await ApiService().updateFeed(
         feedId: widget.feedId,
@@ -182,6 +142,8 @@ class _FeedEditScreenState extends State<FeedEditScreen> {
         climbedAt: _selectedDateTime,
         vGrade: _selectedVGrade,
         myDifficulty: _selectedMyDifficulty,
+        imagePath: _newImageFile?.path,
+        removeImage: _removeImage && _newImageFile == null,
       );
       if (!mounted) return;
       Navigator.pop(context, true);
@@ -197,27 +159,63 @@ class _FeedEditScreenState extends State<FeedEditScreen> {
     }
   }
 
-  String _formatDate(DateTime dateTime) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return '${months[dateTime.month - 1]} ${dateTime.day}, ${dateTime.year}';
+  Future<void> _showDateTimePicker() async {
+    DateTime tempDate = _selectedDateTime;
+    await showCupertinoModalPopup<void>(
+      context: context,
+      builder: (_) => Container(
+        height: 300,
+        color: AppColors.light.lightest,
+        child: Column(
+          children: [
+            Container(
+              height: 52,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    child: const Text('취소'),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    child: const Text('확인'),
+                    onPressed: () {
+                      setState(() => _selectedDateTime = tempDate);
+                      Navigator.pop(context);
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: CupertinoDatePicker(
+                mode: CupertinoDatePickerMode.dateAndTime,
+                initialDateTime: _selectedDateTime,
+                use24hFormat: false,
+                onDateTimeChanged: (value) => tempDate = value,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  String _formatTime(DateTime dateTime) {
-    final hour = dateTime.hour;
-    final minute = dateTime.minute.toString().padLeft(2, '0');
+  String _formatDate(DateTime dt) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+  }
+
+  String _formatTime(DateTime dt) {
+    final hour = dt.hour;
+    final minute = dt.minute.toString().padLeft(2, '0');
     final period = hour >= 12 ? 'PM' : 'AM';
     final hour12 = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
     return '$hour12:$minute $period';
@@ -225,7 +223,6 @@ class _FeedEditScreenState extends State<FeedEditScreen> {
 
   @override
   Widget build(BuildContext context) {
-
     return CupertinoPageScaffold(
       backgroundColor: AppColors.light.lightest,
       child: SafeArea(
@@ -239,46 +236,36 @@ class _FeedEditScreenState extends State<FeedEditScreen> {
                   children: [
                     Text(
                       'edit',
-                      style: AppFonts.bold.xl.copyWith(
-                        color: AppColors.dark.darkest,
-                      ),
+                      style: AppFonts.bold.xl.copyWith(color: AppColors.dark.darkest),
                     ),
                     const SizedBox(height: 28),
 
                     _EditImageSection(
-                      hasImage: _hasImage,
-                      isRemoved: _removeExistingImage,
-                      onTapChangePhoto: _onTapChangePhoto,
+                      existingImageUrl: _existingImageUrl,
+                      newImageFile: _newImageFile,
+                      isRemoved: _removeImage,
+                      onPickImage: _showPickerSheet,
+                      onRemoveImage: _hasImage ? _onRemoveImage : null,
                     ),
 
                     const SizedBox(height: 18),
 
                     Text(
                       '문제에 대해 자유롭게 메모하세요',
-                      style: AppFonts.bold.xs.copyWith(
-                        color: AppColors.dark.darkest,
-                      ),
+                      style: AppFonts.bold.xs.copyWith(color: AppColors.dark.darkest),
                     ),
                     const SizedBox(height: 12),
 
-                    _MemoInputBox(
-                      controller: _memoController,
-                    ),
+                    _MemoInputBox(controller: _memoController),
 
                     const SizedBox(height: 20),
 
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _DateChip(
-                          text: _formatDate(_selectedDateTime),
-                          onTap: _showCupertinoDateTimePicker,
-                        ),
+                        _DateChip(text: _formatDate(_selectedDateTime), onTap: _showDateTimePicker),
                         const SizedBox(width: 8),
-                        _DateChip(
-                          text: _formatTime(_selectedDateTime),
-                          onTap: _showCupertinoDateTimePicker,
-                        ),
+                        _DateChip(text: _formatTime(_selectedDateTime), onTap: _showDateTimePicker),
                       ],
                     ),
 
@@ -292,11 +279,7 @@ class _FeedEditScreenState extends State<FeedEditScreen> {
                             title: 'V등급 난이도',
                             items: _vGradeItems,
                             initialValue: _selectedVGrade,
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedVGrade = value;
-                              });
-                            },
+                            onChanged: (value) => setState(() => _selectedVGrade = value),
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -305,11 +288,7 @@ class _FeedEditScreenState extends State<FeedEditScreen> {
                             title: '나의 체감 난이도',
                             items: _myDifficultyItems,
                             initialValue: _selectedMyDifficulty,
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedMyDifficulty = value;
-                              });
-                            },
+                            onChanged: (value) => setState(() => _selectedMyDifficulty = value),
                           ),
                         ),
                       ],
@@ -319,18 +298,14 @@ class _FeedEditScreenState extends State<FeedEditScreen> {
 
                     ButtonPrimary(
                       text: _isSubmitting ? '처리 중...' : '수정 완료',
-                      onPressed: _submitEdit,
+                      onPressed: _canSubmit ? _submitEdit : null,
                     ),
                   ],
                 ),
               ),
             ),
-
             const Divider(height: 1),
-
-            CustomTabBar(
-              selectedIndex: _selectedTabIndex,
-            ),
+            CustomTabBar(selectedIndex: 3),
           ],
         ),
       ),
@@ -339,79 +314,105 @@ class _FeedEditScreenState extends State<FeedEditScreen> {
 }
 
 class _EditImageSection extends StatelessWidget {
-  final bool hasImage;
+  final String? existingImageUrl;
+  final File? newImageFile;
   final bool isRemoved;
-  final VoidCallback onTapChangePhoto;
+  final VoidCallback onPickImage;
+  final VoidCallback? onRemoveImage;
 
   const _EditImageSection({
-    required this.hasImage,
+    required this.existingImageUrl,
+    required this.newImageFile,
     required this.isRemoved,
-    required this.onTapChangePhoto,
+    required this.onPickImage,
+    this.onRemoveImage,
   });
+
+  bool get _hasImage =>
+      !isRemoved && (newImageFile != null || existingImageUrl != null);
+
+  Widget _buildPreview() {
+    if (newImageFile != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.file(
+          newImageFile!,
+          width: double.infinity,
+          height: 160,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+    if (existingImageUrl != null && !isRemoved) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          existingImageUrl!,
+          width: double.infinity,
+          height: 160,
+          fit: BoxFit.cover,
+          loadingBuilder: (ctx, child, progress) {
+            if (progress == null) return child;
+            return SizedBox(
+              height: 160,
+              child: Center(
+                child: CircularProgressIndicator(
+                  value: progress.expectedTotalBytes != null
+                      ? progress.cumulativeBytesLoaded /
+                          progress.expectedTotalBytes!
+                      : null,
+                ),
+              ),
+            );
+          },
+          errorBuilder: (ctx, err, stack) => SizedBox(
+            height: 160,
+            child: Center(
+              child: Icon(Icons.broken_image, color: AppColors.light.darkest, size: 40),
+            ),
+          ),
+        ),
+      );
+    }
+    return SizedBox(
+      height: 160,
+      child: Center(child: Image.asset('assets/icons/photo.png')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    String buttonText = '사진 변경하기';
-
-    if (isRemoved) {
-      buttonText = '사진 다시 적용하기';
-    }
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
       decoration: BoxDecoration(
-        border: Border.all(
-          color: AppColors.light.darkest,
-          width: 2,
-        ),
+        border: Border.all(color: AppColors.light.darkest, width: 2),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
         children: [
-          Container(
-            height: 120,
-            alignment: Alignment.center,
-            child: hasImage
-                ? ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                width: double.infinity,
-                height: 120,
-                color: AppColors.light.light,
-                alignment: Alignment.center,
+          _buildPreview(),
+          const SizedBox(height: 12),
+          ButtonSecondary(
+            text: _hasImage ? '다른 사진 선택' : '사진 선택하기',
+            onPressed: onPickImage,
+          ),
+          if (onRemoveImage != null) ...[
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: onRemoveImage,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Text(
-                  '기존 또는 새 이미지',
+                  '이미지 제거',
                   style: AppFonts.regular.m.copyWith(
-                    color: AppColors.dark.darkest,
+                    color: AppColors.error.darkest,
                   ),
                 ),
               ),
-            )
-                : Image.asset('assets/icons/photo.png'),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            height: 62,
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: AppColors.signature.darkest,
-                width: 2,
-              ),
-              borderRadius: BorderRadius.circular(22),
             ),
-            child: CupertinoButton(
-              padding: EdgeInsets.zero,
-              onPressed: onTapChangePhoto,
-              child: Text(
-                buttonText,
-                style: AppFonts.regular.xl.copyWith(
-                  color: AppColors.dark.darkest,
-                ),
-              ),
-            ),
-          ),
+          ],
         ],
       ),
     );
@@ -421,9 +422,7 @@ class _EditImageSection extends StatelessWidget {
 class _MemoInputBox extends StatelessWidget {
   final TextEditingController controller;
 
-  const _MemoInputBox({
-    required this.controller,
-  });
+  const _MemoInputBox({required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -431,10 +430,7 @@ class _MemoInputBox extends StatelessWidget {
       height: 96,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
-        border: Border.all(
-          color: AppColors.signature.darkest,
-          width: 2,
-        ),
+        border: Border.all(color: AppColors.signature.darkest, width: 2),
         borderRadius: BorderRadius.circular(24),
       ),
       child: CupertinoTextField(
@@ -442,16 +438,12 @@ class _MemoInputBox extends StatelessWidget {
         maxLines: null,
         expands: true,
         padding: EdgeInsets.zero,
-        decoration: const BoxDecoration(
-          color: Colors.transparent,
-        ),
+        decoration: const BoxDecoration(color: Colors.transparent),
         placeholder: 'text',
         placeholderStyle: AppFonts.regular.xl.copyWith(
           color: AppColors.dark.darkest.withValues(alpha: 0.55),
         ),
-        style: AppFonts.regular.xl.copyWith(
-          color: AppColors.dark.darkest,
-        ),
+        style: AppFonts.regular.xl.copyWith(color: AppColors.dark.darkest),
         cursorColor: AppColors.signature.darkest,
       ),
     );
@@ -462,10 +454,7 @@ class _DateChip extends StatelessWidget {
   final String text;
   final VoidCallback onTap;
 
-  const _DateChip({
-    required this.text,
-    required this.onTap,
-  });
+  const _DateChip({required this.text, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -481,9 +470,7 @@ class _DateChip extends StatelessWidget {
         ),
         child: Text(
           text,
-          style: AppFonts.regular.m.copyWith(
-            color: AppColors.dark.darkest,
-          ),
+          style: AppFonts.regular.m.copyWith(color: AppColors.dark.darkest),
         ),
       ),
     );

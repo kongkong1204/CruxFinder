@@ -71,7 +71,9 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _onTapForgotPassword() {}
+  void _onTapForgotPassword() {
+    Navigator.pushNamed(context, '/forgot-password');
+  }
 
   void _onTapSignUp() {
     Navigator.pushNamed(context, '/signup');

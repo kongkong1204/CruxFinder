@@ -1,11 +1,14 @@
-// lib/screens/SolutionHold.dart
+// lib/screens/SolutionTag.dart
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../components/ButtonPrimary.dart';
 import '../components/TabBar.dart';
+import '../services/api_service.dart';
 import '../styles/colors.dart';
 import '../styles/fonts.dart';
+import '../models/analysis.dart';
 
 // 홀드 타입
 enum HoldType { jug, pinch, crimp, sloper, pocket }
@@ -23,19 +26,19 @@ extension HoldTypeLabel on HoldType {
 }
 
 // 홀드 크기
-enum HoldSize { small, medium, large }
+enum HoldSize { s, m, l }
 
 extension HoldSizeLabel on HoldSize {
   String get label {
     switch (this) {
-      case HoldSize.small: return '소';
-      case HoldSize.medium: return '중';
-      case HoldSize.large: return '대';
+      case HoldSize.s: return '소';
+      case HoldSize.m: return '중';
+      case HoldSize.l: return '대';
     }
   }
 }
 
-// 홀드 데이터 모델
+// 홀드 데이터 모델 (픽셀 좌표 — Roboflow center x/y/w/h)
 class HoldData {
   final int id;
   final double x;
@@ -63,22 +66,35 @@ class HoldData {
 }
 
 class SolutionTagScreen extends StatefulWidget {
-  const SolutionTagScreen({super.key});
+  final File imageFile;
+  final AnalysisResult result;
+  final String wallHeight;
+  final String wallTags;
+
+  const SolutionTagScreen({
+    super.key,
+    required this.imageFile,
+    required this.result,
+    required this.wallHeight,
+    required this.wallTags,
+  });
 
   @override
   State<SolutionTagScreen> createState() => _SolutionTagScreenState();
 }
 
 class _SolutionTagScreenState extends State<SolutionTagScreen> {
+  late List<HoldData> _holds;
 
-  // TODO: Roboflow API 응답으로 교체
-  final List<HoldData> _holds = [
-    HoldData(id: 0, x: 0.2, y: 0.3, width: 0.08, height: 0.08),
-    HoldData(id: 1, x: 0.5, y: 0.2, width: 0.07, height: 0.07),
-    HoldData(id: 2, x: 0.7, y: 0.5, width: 0.09, height: 0.09),
-    HoldData(id: 3, x: 0.3, y: 0.6, width: 0.08, height: 0.08),
-    HoldData(id: 4, x: 0.6, y: 0.75, width: 0.07, height: 0.07),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _holds = widget.result.holds.asMap().entries.map((entry) {
+      final i = entry.key;
+      final h = entry.value;
+      return HoldData(id: i, x: h.x, y: h.y, width: h.width, height: h.height);
+    }).toList();
+  }
 
   void _onHoldTap(HoldData hold) {
     setState(() {
@@ -122,9 +138,7 @@ class _SolutionTagScreenState extends State<SolutionTagScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Text(
                 'solution',
-                style: AppFonts.title.T.copyWith(
-                  color: AppColors.dark.darkest,
-                ),
+                style: AppFonts.title.T.copyWith(color: AppColors.dark.darkest),
               ),
             ),
             const SizedBox(height: 8),
@@ -132,91 +146,65 @@ class _SolutionTagScreenState extends State<SolutionTagScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Text(
                 '사용하는 홀드에\n태그를 적용해주세요',
-                style: AppFonts.bold.xl.copyWith(
-                  color: AppColors.dark.darkest,
-                ),
+                style: AppFonts.bold.xl.copyWith(color: AppColors.dark.darkest),
               ),
             ),
             const SizedBox(height: 16),
 
-            // 이미지 + 홀드 바운딩 박스
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return Container(
-                      width: constraints.maxWidth,
-                      decoration: BoxDecoration(
-                        color: AppColors.light.light,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: AppColors.light.darkest,
-                          width: 1.5,
-                        ),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: Stack(
-                          children: [
-                            // TODO: 실제 이미지로 교체
-                            Center(
-                              child: Image.asset(
-                                'assets/icons/photo.png',
-                                width: 48,
-                                height: 48,
-                              ),
-                            ),
-
-                            // 홀드 바운딩 박스들
-                            ..._holds.map((hold) {
-                              final left = hold.x * constraints.maxWidth - (hold.width * constraints.maxWidth / 2);
-                              final top = hold.y * constraints.maxHeight - (hold.height * constraints.maxHeight / 2);
-                              final w = hold.width * constraints.maxWidth;
-                              final h = hold.height * constraints.maxHeight;
-
-                              // 시작/끝 홀드에 따라 색상 구분
-                              final Color borderColor = hold.isStart
-                                  ? AppColors.clear.darkest
-                                  : hold.isTop
-                                  ? AppColors.error.darkest
-                                  : hold.isSelected
-                                  ? AppColors.signature.darkest
-                                  : AppColors.light.darkest;
-
-                              final Color fillColor = hold.isStart
-                                  ? AppColors.clear.darkest.withValues(alpha: 0.2)
-                                  : hold.isTop
-                                  ? AppColors.error.darkest.withValues(alpha: 0.2)
-                                  : hold.isSelected
-                                  ? AppColors.signature.darkest.withValues(alpha: 0.2)
-                                  : Colors.transparent;
-
-                              return Positioned(
-                                left: left,
-                                top: top,
-                                width: w,
-                                height: h,
-                                child: GestureDetector(
-                                  onTap: () => _onHoldTap(hold),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      border: Border.all(
-                                        color: borderColor,
-                                        width: 2,
-                                      ),
-                                      borderRadius: BorderRadius.circular(4),
-                                      color: fillColor,
-                                    ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: FittedBox(
+                    fit: BoxFit.contain,
+                    child: SizedBox(
+                      width: widget.result.imageWidth,
+                      height: widget.result.imageHeight,
+                      child: Stack(
+                        children: [
+                          Image.file(
+                            widget.imageFile,
+                            width: widget.result.imageWidth,
+                            height: widget.result.imageHeight,
+                            fit: BoxFit.fill,
+                          ),
+                          ..._holds.map((hold) {
+                            final Color borderColor = hold.isStart
+                                ? AppColors.clear.darkest
+                                : hold.isTop
+                                ? AppColors.error.darkest
+                                : hold.isSelected
+                                ? AppColors.signature.darkest
+                                : AppColors.light.darkest;
+                            final Color fillColor = hold.isStart
+                                ? AppColors.clear.darkest.withValues(alpha: 0.2)
+                                : hold.isTop
+                                ? AppColors.error.darkest.withValues(alpha: 0.2)
+                                : hold.isSelected
+                                ? AppColors.signature.darkest.withValues(alpha: 0.2)
+                                : Colors.transparent;
+                            return Positioned(
+                              left: hold.x - hold.width / 2,
+                              top: hold.y - hold.height / 2,
+                              width: hold.width,
+                              height: hold.height,
+                              child: GestureDetector(
+                                onTap: () => _onHoldTap(hold),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: borderColor, width: 2),
+                                    borderRadius: BorderRadius.circular(4),
+                                    color: fillColor,
                                   ),
                                 ),
-                              );
-                            }),
-                          ],
-                        ),
+                              ),
+                            );
+                          }),
+                        ],
                       ),
-                    );
-                  },
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -227,19 +215,36 @@ class _SolutionTagScreenState extends State<SolutionTagScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               child: ButtonPrimary(
                 text: '다음',
-                onPressed: () {
+                onPressed: () async {
                   final selected = _holds.where((h) => h.isSelected).toList();
-                  debugPrint('선택된 홀드: ${selected.length}개');
-                  // TODO: 다음 화면 이동
+
+                  final holdsData = selected.map((h) => {
+                    'id': h.id,
+                    'x': h.x,
+                    'y': h.y,
+                    'width': h.width,
+                    'height': h.height,
+                    'isSelected': h.isSelected,
+                    'isStart': h.isStart,
+                    'isTop': h.isTop,
+                    'typeTag': h.type?.name,
+                    'sizeTag': h.size?.name,
+                  }).toList();
+
+                  final data = await ApiService().saveTaggedHolds(
+                    routeId: widget.result.routeId,
+                    holds: holdsData,
+                    wallHeight: widget.wallHeight,
+                    wallTags: widget.wallTags,
+                  );
+                  // TODO: 다음 화면으로 이동
                 },
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: CustomTabBar(
-        selectedIndex: 2,
-      ),
+      bottomNavigationBar: CustomTabBar(selectedIndex: 2),
     );
   }
 }
@@ -284,7 +289,6 @@ class _TagBottomSheetState extends State<_TagBottomSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 핸들바
           Center(
             child: Container(
               width: 40,
@@ -297,12 +301,9 @@ class _TagBottomSheetState extends State<_TagBottomSheet> {
           ),
           const SizedBox(height: 20),
 
-          // 홀드 타입
           Text(
             '홀드 타입',
-            style: AppFonts.bold.xl.copyWith(
-              color: AppColors.dark.darkest,
-            ),
+            style: AppFonts.bold.xl.copyWith(color: AppColors.dark.darkest),
           ),
           const SizedBox(height: 12),
 
@@ -344,12 +345,9 @@ class _TagBottomSheetState extends State<_TagBottomSheet> {
 
           const SizedBox(height: 20),
 
-          // 홀드 크기
           Text(
             '홀드 크기',
-            style: AppFonts.bold.xl.copyWith(
-              color: AppColors.dark.darkest,
-            ),
+            style: AppFonts.bold.xl.copyWith(color: AppColors.dark.darkest),
           ),
           const SizedBox(height: 12),
 
@@ -391,18 +389,14 @@ class _TagBottomSheetState extends State<_TagBottomSheet> {
 
           const SizedBox(height: 20),
 
-          // 시작홀드 / 끝홀드
           Text(
             '홀드 역할',
-            style: AppFonts.bold.xl.copyWith(
-              color: AppColors.dark.darkest,
-            ),
+            style: AppFonts.bold.xl.copyWith(color: AppColors.dark.darkest),
           ),
           const SizedBox(height: 12),
 
           Row(
             children: [
-              // 시작홀드
               GestureDetector(
                 onTap: () {
                   setState(() {
@@ -433,7 +427,6 @@ class _TagBottomSheetState extends State<_TagBottomSheet> {
                 ),
               ),
               const SizedBox(width: 8),
-              // 끝홀드
               GestureDetector(
                 onTap: () {
                   setState(() {

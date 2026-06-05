@@ -5,6 +5,7 @@ import { createRequire } from 'module';
 import { authenticate } from '../middlewares/auth.js';
 import { upload } from '../middlewares/upload.js';
 import { buildTaggedProblemJson, parseRoboflowHolds } from '../utils/holdJsonParser.js';
+import { createBeamSearchBeta } from '../utils/beamSearchBeta.js'; //추가
 import prisma from '../lib/prisma.js';
 import fs from 'fs';
 
@@ -142,9 +143,24 @@ router.post('/tag', authenticate, async (req, res) => {
     console.log('result:', JSON.stringify(result, null, 2)); //개발용 json데이터셋 확인
 
 
-    if (!result.ok) {
+    //if (!result.ok) {
+    //  return res.status(400).json({ message: '데이터 검증 실패', errors: result.errors });
+    //}
+
+    //await prisma.climbingRoute.update({
+    //  where: { id: Number(routeId) },
+    //  data: {
+    //    holds: result.data.holds,
+    //  },
+    //});
+
+    //res.json({ ok: true, data: result.data });
+
+    if (!result.ok) {   //추가(변경)
       return res.status(400).json({ message: '데이터 검증 실패', errors: result.errors });
     }
+
+    const beta = createBeamSearchBeta(result.data);
 
     await prisma.climbingRoute.update({
       where: { id: Number(routeId) },
@@ -152,8 +168,12 @@ router.post('/tag', authenticate, async (req, res) => {
         holds: result.data.holds,
       },
     });
+    res.json({
+      ok: true,
+      data: result.data,
+      beta: beta,
+    });       //추가(변경)
 
-    res.json({ ok: true, data: result.data });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: '서버 오류' });

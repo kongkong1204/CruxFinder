@@ -1,5 +1,5 @@
 // testPath.js
-import { findPath } from './src/utils/PathFinderv2.js';
+import { findPath } from './src/utils/Pathfinder.js';
 
 const dataset =
     {

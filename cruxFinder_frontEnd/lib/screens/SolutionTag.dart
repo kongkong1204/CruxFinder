@@ -9,6 +9,7 @@ import '../services/api_service.dart';
 import '../styles/colors.dart';
 import '../styles/fonts.dart';
 import '../models/analysis.dart';
+import 'SolutionResult.dart';
 
 // 홀드 타입
 enum HoldType { jug, pinch, crimp, sloper, pocket }
@@ -182,7 +183,7 @@ class _SolutionTagScreenState extends State<SolutionTagScreen> {
                                 : hold.isTop
                                 ? AppColors.error.darkest.withValues(alpha: 0.2)
                                 : hold.isSelected
-                                ? AppColors.signature.darkest.withValues(alpha: 0.2)
+                                ? AppColors.signature.darkest.withValues(alpha: 0.5)
                                 : Colors.transparent;
                             return Positioned(
                               left: hold.x - hold.width / 2,
@@ -237,7 +238,33 @@ class _SolutionTagScreenState extends State<SolutionTagScreen> {
                     wallHeight: widget.wallHeight,
                     wallTags: widget.wallTags,
                   );
-                  // TODO: 다음 화면으로 이동
+
+                  // debugPrint('data keys: ${data.keys}');
+                  // debugPrint('solution: ${data['solution']}');
+
+                  if (!context.mounted) return;
+
+                  final solution = data['solution'] as Map<String, dynamic>?;
+
+                  // debugPrint('solution parsed: $solution');
+
+                  if (solution == null || solution['ok'] != true) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(solution?['message'] ?? '경로를 찾지 못했습니다.')),
+                    );
+                    return;
+                  }
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SolutionResultScreen(
+                        imageFile: widget.imageFile,
+                        result: widget.result,
+                        solution: solution,
+                      ),
+                    ),
+                  );
                 },
               ),
             ),

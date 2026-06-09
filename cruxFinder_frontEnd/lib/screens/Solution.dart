@@ -9,6 +9,7 @@ import '../components/ButtonPrimary.dart';
 import '../components/ButtonSecondary.dart';
 import '../components/DropDown.dart';
 import '../components/TabBar.dart';
+import '../components/ActionSheetOverlay.dart';
 import '../services/api_service.dart';
 import '../models/analysis.dart';
 import '../styles/colors.dart';
@@ -26,6 +27,7 @@ class _SolutionScreenState extends State<SolutionScreen> {
   final _picker = ImagePicker();
   File? _selectedImage;
   bool _isAnalyzing = false;
+  bool _showSheet = false;
 
   String _selectedWallHeight = '300cm';
   final List<String> _wallHeightItems = [
@@ -138,120 +140,138 @@ class _SolutionScreenState extends State<SolutionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.light.lightest,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                'solution',
-                style: AppFonts.title.T.copyWith(color: AppColors.dark.darkest),
-              ),
-            ),
-            const SizedBox(height: 20),
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    'solution',
+                    style: AppFonts.title.T.copyWith(color: AppColors.dark.darkest),
+                  ),
+                ),
+                const SizedBox(height: 20),
 
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '최적의 솔루션을 찾기위해\n문제 정면 사진을 선택해 주세요',
-                      style: AppFonts.bold.xl.copyWith(color: AppColors.dark.darkest),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // 사진 프리뷰
-                    GestureDetector(
-                      onTap: _showPickerSheet,
-                      child: Container(
-                        width: double.infinity,
-                        height: 200,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: AppColors.light.darkest,
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: _selectedImage != null
-                            ? ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: Image.file(
-                            _selectedImage!,
-                            fit: BoxFit.cover,
-                          ),
-                        )
-                            : Center(
-                          child: Image.asset(
-                            'assets/icons/photo.png',
-                            width: 40,
-                            height: 40,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    ButtonSecondary(
-                      text: _selectedImage == null ? '사진 선택' : '다른 사진 선택',
-                      onPressed: _showPickerSheet,
-                    ),
-
-                    const SizedBox(height: 28),
-
-                    Text(
-                      '벽 정보를 입력해 주세요',
-                      style: AppFonts.bold.xl.copyWith(color: AppColors.dark.darkest),
-                    ),
-                    const SizedBox(height: 12),
-
-                    Row(
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: DropDown(
-                            title: '벽 높이',
-                            items: _wallHeightItems,
-                            initialValue: _selectedWallHeight,
-                            onChanged: (value) {
-                              setState(() => _selectedWallHeight = value);
-                            },
+                        Text(
+                          '최적의 솔루션을 찾기위해\n문제 정면 사진을 선택해 주세요',
+                          style: AppFonts.bold.xl.copyWith(color: AppColors.dark.darkest),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // 사진 프리뷰
+                        GestureDetector(
+                          onTap: () => setState(() => _showSheet = true),
+                          child: Container(
+                            width: double.infinity,
+                            height: 200,
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: AppColors.light.darkest,
+                                width: 1.5,
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: _selectedImage != null
+                                ? ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: Image.file(
+                                _selectedImage!,
+                                fit: BoxFit.cover,
+                              ),
+                            )
+                                : Center(
+                              child: Image.asset(
+                                'assets/icons/photo.png',
+                                width: 40,
+                                height: 40,
+                              ),
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: DropDown(
-                            title: '경사각',
-                            items: _wallAngleItems,
-                            initialValue: _selectedWallAngle,
-                            onChanged: (value) {
-                              setState(() => _selectedWallAngle = value);
-                            },
-                          ),
+                        const SizedBox(height: 12),
+
+                        ButtonSecondary(
+                          text: _selectedImage == null ? '사진 선택' : '다른 사진 선택',
+                          onPressed: () => setState(() => _showSheet = true),
                         ),
+
+                        const SizedBox(height: 28),
+
+                        Text(
+                          '벽 정보를 입력해 주세요',
+                          style: AppFonts.bold.xl.copyWith(color: AppColors.dark.darkest),
+                        ),
+                        const SizedBox(height: 12),
+
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: DropDown(
+                                title: '벽 높이',
+                                items: _wallHeightItems,
+                                initialValue: _selectedWallHeight,
+                                onChanged: (value) {
+                                  setState(() => _selectedWallHeight = value);
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: DropDown(
+                                title: '경사각',
+                                items: _wallAngleItems,
+                                initialValue: _selectedWallAngle,
+                                onChanged: (value) {
+                                  setState(() => _selectedWallAngle = value);
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 40),
+
+                        ButtonPrimary(
+                          text: _isAnalyzing ? '분석 중...' : '다음',
+                          onPressed: _selectedImage == null || _isAnalyzing
+                              ? null
+                              : _analyze,
+                        ),
+
+                        const SizedBox(height: 24),
                       ],
                     ),
-
-                    const SizedBox(height: 40),
-
-                    ButtonPrimary(
-                      text: _isAnalyzing ? '분석 중...' : '다음',
-                      onPressed: _selectedImage == null || _isAnalyzing
-                          ? null
-                          : _analyze,
-                    ),
-
-                    const SizedBox(height: 24),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+          ActionSheetOverlay(
+            visible: _showSheet,
+            actions: [
+              ActionSheetItem(
+                label: '갤러리에서 선택',
+                onTap: () => _pickImage(ImageSource.gallery),
+              ),
+              ActionSheetItem(
+                label: '카메라로 촬영',
+                onTap: () => _pickImage(ImageSource.camera),
+              ),
+            ],
+            onCancel: () => setState(() => _showSheet = false),
+          ),
+        ],
       ),
       bottomNavigationBar: CustomTabBar(selectedIndex: 2),
     );

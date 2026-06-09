@@ -13,6 +13,8 @@ import '../components/ButtonSecondary.dart';
 import '../components/DropDown.dart';
 import '../components/TabBar.dart';
 import '../components/TextField.dart';
+import '../components/ActionSheetOverlay.dart';
+import '../screens/Feed.dart';
 import '../services/api_service.dart';
 import '../styles/colors.dart';
 import '../styles/fonts.dart';
@@ -27,9 +29,10 @@ class FeedUploadScreen extends StatefulWidget {
 class _FeedUploadScreenState extends State<FeedUploadScreen> {
   final TextEditingController _memoController = TextEditingController();
 
-  DateTime _selectedDateTime = DateTime(2025, 4, 1, 9, 41);
+  DateTime _selectedDateTime = DateTime.now();
   File? _selectedImage;
   bool _isSubmitting = false;
+  bool _showSheet = false;
 
   String _selectedVGrade = 'VB';
   String _selectedMyDifficulty = '1';
@@ -43,35 +46,6 @@ class _FeedUploadScreenState extends State<FeedUploadScreen> {
     '1', '2', '3', '4', '5',
     '6', '7', '8', '9', '10',
   ];
-
-  void _showPickerSheet() {
-    showModalBottomSheet(
-      context: context,
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('갤러리에서 선택'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(ImageSource.gallery);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('카메라로 촬영'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(ImageSource.camera);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
@@ -91,7 +65,10 @@ class _FeedUploadScreenState extends State<FeedUploadScreen> {
         imagePath: _selectedImage?.path,
       );
       if (!mounted) return;
-      Navigator.pop(context);
+      Navigator.pushReplacement(
+        context,
+        CupertinoPageRoute(builder: (_) => const FeedScreen()),
+      );
     } on DioException catch (e) {
       if (!mounted) return;
       final message = e.response?.data['message'] ?? '업로드 실패';
@@ -110,9 +87,9 @@ class _FeedUploadScreenState extends State<FeedUploadScreen> {
     super.dispose();
   }
 
-  Future<void> _showCupertinoDateTimePicker() async {
-    DateTime tempDate = _selectedDateTime;
-
+  // 날짜 선택 (년/월/일)
+  Future<void> _showDatePicker() async {
+    DateTime temp = _selectedDateTime;
     await showCupertinoModalPopup(
       context: context,
       builder: (_) {
@@ -136,9 +113,7 @@ class _FeedUploadScreenState extends State<FeedUploadScreen> {
                       padding: EdgeInsets.zero,
                       child: const Text('확인'),
                       onPressed: () {
-                        setState(() {
-                          _selectedDateTime = tempDate;
-                        });
+                        setState(() => _selectedDateTime = temp);
                         Navigator.pop(context);
                       },
                     ),
@@ -148,11 +123,13 @@ class _FeedUploadScreenState extends State<FeedUploadScreen> {
               const Divider(height: 1),
               Expanded(
                 child: CupertinoDatePicker(
-                  mode: CupertinoDatePickerMode.dateAndTime,
+                  mode: CupertinoDatePickerMode.date,
                   initialDateTime: _selectedDateTime,
-                  use24hFormat: false,
                   onDateTimeChanged: (value) {
-                    tempDate = value;
+                    temp = DateTime(
+                      value.year, value.month, value.day,
+                      _selectedDateTime.hour, _selectedDateTime.minute,
+                    );
                   },
                 ),
               ),
@@ -163,128 +140,196 @@ class _FeedUploadScreenState extends State<FeedUploadScreen> {
     );
   }
 
-  String _formatDate(DateTime dateTime) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ];
-    return '${months[dateTime.month - 1]} ${dateTime.day}, ${dateTime.year}';
+  // 시간 선택 (시/분)
+  Future<void> _showTimePicker() async {
+    DateTime temp = _selectedDateTime;
+    await showCupertinoModalPopup(
+      context: context,
+      builder: (_) {
+        return Container(
+          height: 300,
+          color: AppColors.light.lightest,
+          child: Column(
+            children: [
+              Container(
+                height: 52,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      child: const Text('취소'),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      child: const Text('확인'),
+                      onPressed: () {
+                        setState(() => _selectedDateTime = temp);
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.time,
+                  initialDateTime: _selectedDateTime,
+                  use24hFormat: true,
+                  onDateTimeChanged: (value) {
+                    temp = DateTime(
+                      _selectedDateTime.year, _selectedDateTime.month, _selectedDateTime.day,
+                      value.hour, value.minute,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
-  String _formatTime(DateTime dateTime) {
-    final hour = dateTime.hour;
-    final minute = dateTime.minute.toString().padLeft(2, '0');
-    final period = hour >= 12 ? 'PM' : 'AM';
-    final hour12 = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
-    return '$hour12:$minute $period';
+  // 년. 월. 일
+  String _formatDate(DateTime dt) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${dt.year}. ${two(dt.month)}. ${two(dt.day)}';
+  }
+
+  // 시:분 (24시간제)
+  String _formatTime(DateTime dt) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(dt.hour)}:${two(dt.minute)}';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.light.lightest,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                'upload',
-                style: AppFonts.title.T.copyWith(
-                  color: AppColors.dark.darkest,
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    'upload',
+                    style: AppFonts.title.T.copyWith(
+                      color: AppColors.dark.darkest,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _UploadImageSection(
-                      selectedImage: _selectedImage,
-                      onTapChangePhoto: _showPickerSheet,
-                    ),
-                    const SizedBox(height: 18),
-
-                    Text(
-                      '문제에 대해 자유롭게 메모하세요',
-                      style: AppFonts.bold.xs.copyWith(
-                        color: AppColors.dark.darkest,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    CustomTextField(
-                      controller: _memoController,
-                      placeholder: 'text',
-                    ),
-                    const SizedBox(height: 20),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _DateChip(
-                          text: _formatDate(_selectedDateTime),
-                          onTap: _showCupertinoDateTimePicker,
-                        ),
-                        const SizedBox(width: 8),
-                        _DateChip(
-                          text: _formatTime(_selectedDateTime),
-                          onTap: _showCupertinoDateTimePicker,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-
-                    Row(
+                const SizedBox(height: 20),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: DropDown(
-                            title: 'V등급 난이도',
-                            items: _vGradeItems,
-                            initialValue: _selectedVGrade,
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedVGrade = value;
-                              });
-                            },
+                        _UploadImageSection(
+                          selectedImage: _selectedImage,
+                          onTapChangePhoto: () => setState(() => _showSheet = true),
+                        ),
+                        const SizedBox(height: 18),
+
+                        Text(
+                          '문제에 대해 자유롭게 메모하세요',
+                          style: AppFonts.bold.xs.copyWith(
+                            color: AppColors.dark.darkest,
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: DropDown(
-                            title: '나의 체감 난이도',
-                            items: _myDifficultyItems,
-                            initialValue: _selectedMyDifficulty,
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedMyDifficulty = value;
-                              });
-                            },
-                          ),
+                        const SizedBox(height: 12),
+
+                        CustomTextField(
+                          controller: _memoController,
+                          placeholder: 'text',
                         ),
+                        const SizedBox(height: 20),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _DateChip(
+                              text: _formatDate(_selectedDateTime),
+                              onTap: _showDatePicker,
+                            ),
+                            const SizedBox(width: 8),
+                            _DateChip(
+                              text: _formatTime(_selectedDateTime),
+                              onTap: _showTimePicker,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: DropDown(
+                                title: 'V등급 난이도',
+                                items: _vGradeItems,
+                                initialValue: _selectedVGrade,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedVGrade = value;
+                                  });
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: DropDown(
+                                title: '나의 체감 난이도',
+                                items: _myDifficultyItems,
+                                initialValue: _selectedMyDifficulty,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedMyDifficulty = value;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 40),
+
+                        ButtonPrimary(
+                          text: _isSubmitting ? '업로드 중...' : '업로드',
+                          onPressed: _submitUpload,
+                        ),
+
+                        const SizedBox(height: 24),
                       ],
                     ),
-
-                    const SizedBox(height: 40),
-
-                    ButtonPrimary(
-                      text: _isSubmitting ? '업로드 중...' : '업로드',
-                      onPressed: _submitUpload,
-                    ),
-
-                    const SizedBox(height: 24),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+          ActionSheetOverlay(
+            visible: _showSheet,
+            actions: [
+              ActionSheetItem(
+                label: '갤러리에서 선택',
+                onTap: () => _pickImage(ImageSource.gallery),
+              ),
+              ActionSheetItem(
+                label: '카메라로 촬영',
+                onTap: () => _pickImage(ImageSource.camera),
+              ),
+            ],
+            onCancel: () => setState(() => _showSheet = false),
+          ),
+        ],
       ),
       bottomNavigationBar: CustomTabBar(
         selectedIndex: 3,
@@ -318,14 +363,14 @@ class _UploadImageSection extends StatelessWidget {
             alignment: Alignment.center,
             child: selectedImage != null
                 ? ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Image.file(
-                      selectedImage!,
-                      width: double.infinity,
-                      height: 120,
-                      fit: BoxFit.cover,
-                    ),
-                  )
+              borderRadius: BorderRadius.circular(16),
+              child: Image.file(
+                selectedImage!,
+                width: double.infinity,
+                height: 120,
+                fit: BoxFit.cover,
+              ),
+            )
                 : Image.asset('assets/icons/photo.png'),
           ),
           const SizedBox(height: 12),

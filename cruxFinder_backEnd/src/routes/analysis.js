@@ -5,6 +5,7 @@ import { createRequire } from 'module';
 import { authenticate } from '../middlewares/auth.js';
 import { upload } from '../middlewares/upload.js';
 import { buildTaggedProblemJson, parseRoboflowHolds } from '../utils/holdJsonParser.js';
+import { findPath } from '../utils/pathFinder.js';
 import prisma from '../lib/prisma.js';
 import fs from 'fs';
 
@@ -139,25 +140,25 @@ router.post('/tag', authenticate, async (req, res) => {
       },
       holds: normalizedHolds,
     });
-    console.log('result:', JSON.stringify(result, null, 2)); //개발용 json데이터셋 확인
-
 
     if (!result.ok) {
       return res.status(400).json({ message: '데이터 검증 실패', errors: result.errors });
     }
-
-    await prisma.climbingRoute.update({
-      where: { id: Number(routeId) },
-      data: {
-        holds: result.data.holds,
-      },
+    console.log('최종 데이터셋:', JSON.stringify(result.data, null, 2));
+    // 최종 데이터셋으로 바로 경로 탐색
+    // findPath가 wall에 내부 scale을 주입하므로 복사본을 넘겨 응답 원본 보호
+    const solution = findPath({
+      wall: { ...result.data.wall },
+      user: result.data.user,
+      holds: result.data.holds,
     });
 
-    res.json({ ok: true, data: result.data });
+    res.json({ ok: true, data: result.data, solution });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: '서버 오류' });
   }
+
 });
 
 // 분석 결과 조회
@@ -185,6 +186,22 @@ router.get('/routes/:id', authenticate, async (req, res) => {
     res.json(route);
   } catch (err) {
     res.status(500).json({ message: '서버 오류' });
+  }
+});
+
+// ── 개발용: 최종 데이터셋을 그대로 받아 findPath만 실행 (토큰 불필요) ──
+router.post('/solve-test', (req, res) => {
+  try {
+    const { wall, user, holds } = req.body;
+    if (!wall || !user || !Array.isArray(holds)) {
+      return res.status(400).json({ message: 'wall, user, holds가 필요합니다.' });
+    }
+    // findPath가 wall에 내부 scale을 주입하므로 복사본 전달
+    const solution = findPath({ wall: { ...wall }, user, holds });
+    res.json({ solution });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: '경로 탐색 중 오류', error: String(err) });
   }
 });
 

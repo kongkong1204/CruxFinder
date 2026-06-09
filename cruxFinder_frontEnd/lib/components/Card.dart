@@ -12,7 +12,7 @@ class FeedCard extends StatelessWidget {
   final String dateText;
   final String absoluteGrade;
   final String relativeGrade;
-  final String? imagePath;
+  final String? imageUrl;
   final VoidCallback? onMoreTap;
 
   const FeedCard({
@@ -21,11 +21,11 @@ class FeedCard extends StatelessWidget {
     required this.dateText,
     required this.absoluteGrade,
     required this.relativeGrade,
-    this.imagePath,
+    this.imageUrl,
     this.onMoreTap,
   });
 
-  bool get hasImage => imagePath != null && imagePath!.isNotEmpty;
+  bool get hasImage => imageUrl != null && imageUrl!.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +34,14 @@ class FeedCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.signature.darkest,
         borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 12,
+            spreadRadius: 1,
+            offset: const Offset(0, 0),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -58,9 +66,20 @@ class FeedCard extends StatelessWidget {
             color: AppColors.light.lightest,
 
             child: hasImage
-                ? Image.asset(
-              imagePath!,
+                ? Image.network(
+              imageUrl!,
               fit: BoxFit.cover,
+              loadingBuilder: (ctx, child, progress) {
+                if (progress == null) return child;
+                return const Center(child: CircularProgressIndicator());
+              },
+              errorBuilder: (ctx, err, stack) => Center(
+                child: Image.asset(
+                  'assets/icons/photo.png',
+                  width: 36,
+                  height: 36,
+                ),
+              ),
             )
 
                 : Center(
@@ -103,14 +122,14 @@ class FeedCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    memo,
-                    style: AppFonts.regular.m.copyWith(
-                      color: AppColors.dark.darkest
-                    )
+                      memo,
+                      style: AppFonts.regular.m.copyWith(
+                          color: AppColors.dark.darkest
+                      )
                   ),
                   const Spacer(),
                   Text(
-                    dateText,
+                      dateText,
                       style: AppFonts.regular.xs.copyWith(
                           color: AppColors.dark.darkest
                       )
@@ -127,13 +146,13 @@ class FeedCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  absoluteGrade,
+                    absoluteGrade,
                     style: AppFonts.title.T.copyWith(
                         color: AppColors.dark.darkest
                     )
                 ),
                 Text(
-                  relativeGrade,
+                    relativeGrade,
                     style: AppFonts.title.T.copyWith(
                         color: AppColors.dark.darkest
                     )

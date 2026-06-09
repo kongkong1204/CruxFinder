@@ -1,10 +1,12 @@
 // lib/screens/Home.dart
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../components/Card.dart';
 import '../components/TabBar.dart';
 import '../components/ButtonPrimary.dart';
+import '../components/ActionSheetOverlay.dart';
 import '../services/api_service.dart';
 import '../styles/colors.dart';
 import '../styles/fonts.dart';
@@ -17,7 +19,10 @@ class FeedItem {
   final String dateText;
   final String absoluteGrade;
   final String relativeGrade;
+  final String? imageUrl;
   final DateTime climbedAt;
+  final String vGrade;
+  final String myDifficulty;
 
   FeedItem({
     required this.id,
@@ -25,20 +30,30 @@ class FeedItem {
     required this.dateText,
     required this.absoluteGrade,
     required this.relativeGrade,
+    required this.imageUrl,
     required this.climbedAt,
+    required this.vGrade,
+    required this.myDifficulty,
   });
 
   factory FeedItem.fromJson(Map<String, dynamic> json) {
-    final climbedAt = DateTime.parse(json['climbedAt']);
+    // 백엔드 Feed: id, memo, climbedAt(ISO), vGrade, myDifficulty, imageUrl
+    final climbed = DateTime.tryParse(json['climbedAt']?.toString() ?? '') ??
+        DateTime.now();
+    String two(int n) => n.toString().padLeft(2, '0');
     final dateText =
-        '${climbedAt.year}.${climbedAt.month.toString().padLeft(2, '0')}.${climbedAt.day.toString().padLeft(2, '0')}';
+        '${climbed.year}.${two(climbed.month)}.${two(climbed.day)}';
+
     return FeedItem(
-      id: json['id'],
+      id: json['id'] as int,
       memo: json['memo'] ?? '',
       dateText: dateText,
       absoluteGrade: json['vGrade'] ?? '',
       relativeGrade: json['myDifficulty'] ?? '',
-      climbedAt: climbedAt,
+      imageUrl: json['imageUrl'] as String?,
+      climbedAt: climbed,
+      vGrade: json['vGrade'] ?? '',
+      myDifficulty: json['myDifficulty'] ?? '',
     );
   }
 }
@@ -52,6 +67,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int selectedTabIndex = 0;
+  bool _showSheet = false;
+  FeedItem? _sheetTarget;   // 시트가 대상으로 하는 피드
 
   bool isLoading = true;
   String? errorMessage;
@@ -72,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final data = await ApiService().getFeeds();
       if (!mounted) return;
       setState(() {
-        feeds = data.map((e) => FeedItem.fromJson(e)).toList();
+        feeds = data.map((e) => FeedItem.fromJson(e)).take(5).toList();
         isLoading = false;
       });
     } catch (e) {
@@ -85,64 +102,45 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onMoreTap(FeedItem feed) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.edit),
-              title: const Text('수정'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => FeedEditScreen(
-                      feedId: feed.id,
-                      initialMemo: feed.memo,
-                      initialDateTime: feed.climbedAt,
-                      initialVGrade: feed.absoluteGrade,
-                      initialMyDifficulty: feed.relativeGrade,
-                    ),
-                  ),
-                ).then((refreshed) {
-                  if (refreshed == true) _loadFeeds();
-                });
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('삭제', style: TextStyle(color: Colors.red)),
-              onTap: () {
-                Navigator.pop(context);
-                _confirmDelete(feed);
-              },
-            ),
-          ],
+    setState(() {
+      _sheetTarget = feed;
+      _showSheet = true;
+    });
+  }
+
+  void _openEdit(FeedItem feed) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FeedEditScreen(
+          feedId: feed.id,
+          initialMemo: feed.memo,
+          initialDateTime: feed.climbedAt,
+          initialVGrade: feed.absoluteGrade,
+          initialMyDifficulty: feed.relativeGrade,
+          initialImageUrl: feed.imageUrl,
         ),
       ),
-    );
+    ).then((refreshed) {
+      if (refreshed == true) _loadFeeds();
+    });
   }
 
   Future<void> _confirmDelete(FeedItem feed) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showCupertinoDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (_) => CupertinoAlertDialog(
         title: const Text('피드 삭제'),
         content: const Text('이 피드를 삭제할까요?'),
         actions: [
-          TextButton(
+          CupertinoDialogAction(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('취소'),
           ),
-          TextButton(
+          CupertinoDialogAction(
+            isDestructiveAction: true,
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('삭제', style: TextStyle(color: Colors.red)),
+            child: const Text('삭제'),
           ),
         ],
       ),
@@ -163,89 +161,111 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.light.lightest,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                'Crux Finder',
-                style: AppFonts.title.T.copyWith(
-                  color: AppColors.dark.darkest,
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    'Crux Finder',
+                    style: AppFonts.title.T.copyWith(
+                      color: AppColors.dark.darkest,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                '최근 기록',
-                style: AppFonts.bold.l.copyWith(
-                  color: AppColors.dark.darkest,
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    '최근 기록',
+                    style: AppFonts.bold.l.copyWith(
+                      color: AppColors.dark.darkest,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: Builder(
-                builder: (context) {
-                  if (isLoading) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (errorMessage != null) {
-                    return Center(child: Text(errorMessage!));
-                  }
-                  if (feeds.isEmpty) {
-                    return const Center(child: Text('피드가 없습니다.'));
-                  }
-                  return RefreshIndicator(
-                    onRefresh: _loadFeeds,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: feeds.length,
-                      itemBuilder: (context, index) {
-                        final feed = feeds[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 20),
-                          child: FeedCard(
-                            memo: feed.memo,
-                            dateText: feed.dateText,
-                            absoluteGrade: feed.absoluteGrade,
-                            relativeGrade: feed.relativeGrade,
-                            onMoreTap: () => _onMoreTap(feed),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 10, 0, 10),
+                    child: Builder(
+                      builder: (context) {
+                        if (isLoading) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        if (errorMessage != null) {
+                          return Center(child: Text(errorMessage!));
+                        }
+                        if (feeds.isEmpty) {
+                          return const Center(child: Text('피드가 없습니다.'));
+                        }
+                        return RefreshIndicator(
+                          onRefresh: _loadFeeds,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            itemCount: feeds.length,
+                            itemBuilder: (context, index) {
+                              final feed = feeds[index];
+                              return Padding(
+                                padding: const EdgeInsets.fromLTRB(0,20,0,20),
+                                child: FeedCard(
+                                  memo: feed.memo,
+                                  dateText: feed.dateText,
+                                  absoluteGrade: feed.absoluteGrade,
+                                  relativeGrade: feed.relativeGrade,
+                                  imageUrl: feed.imageUrl,
+                                  onMoreTap: () => _onMoreTap(feed),
+                                ),
+                              );
+                            },
                           ),
                         );
                       },
                     ),
-                  );
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                'Crux Finder와 함께 분석하기',
-                style: AppFonts.bold.xl.copyWith(
-                  color: AppColors.dark.darkest,
+                  ),
                 ),
-              ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    'Crux Finder와 함께 분석하기',
+                    style: AppFonts.bold.xl.copyWith(
+                      color: AppColors.dark.darkest,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  child: ButtonPrimary(
+                    text: '시작하기',
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SolutionScreen()),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              child: ButtonPrimary(
-                text: '시작하기',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SolutionScreen()),
-                  );
-                },
+          ),
+          ActionSheetOverlay(
+            visible: _showSheet,
+            actions: [
+              ActionSheetItem(
+                label: '수정',
+                onTap: () => _openEdit(_sheetTarget!),
               ),
-            ),
-          ],
-        ),
+              ActionSheetItem(
+                label: '삭제',
+                isDestructive: true,
+                onTap: () => _confirmDelete(_sheetTarget!),
+              ),
+            ],
+            onCancel: () => setState(() => _showSheet = false),
+          ),
+        ],
       ),
       bottomNavigationBar: CustomTabBar(
         selectedIndex: selectedTabIndex,

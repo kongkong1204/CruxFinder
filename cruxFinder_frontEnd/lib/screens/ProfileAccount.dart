@@ -9,6 +9,7 @@ import '../components/ButtonSecondary.dart';
 import '../services/api_service.dart';
 import '../styles/colors.dart';
 import '../styles/fonts.dart';
+import 'ForgotPassword.dart';
 
 class ProfileAccountScreen extends StatefulWidget {
   final String nickname;
@@ -146,7 +147,12 @@ class _ProfileAccountScreenState extends State<ProfileAccountScreen> {
                     ButtonSecondary(
                       text: '비밀번호 변경',
                       onPressed: () {
-                        // TODO: 비밀번호 변경 화면 이동
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ForgotPasswordScreen(initialEmail: widget.email),
+                          ),
+                        );
                       },
                     ),
                     const SizedBox(height: 40),

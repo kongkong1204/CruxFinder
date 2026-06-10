@@ -12,7 +12,8 @@ import '../styles/fonts.dart';
 enum _Step { email, code, newPassword }
 
 class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key});
+  const ForgotPasswordScreen({super.key, this.initialEmail});
+  final String? initialEmail;
 
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
@@ -53,6 +54,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialEmail != null) {
+      _emailController.text = widget.initialEmail!;
+    }
     _emailController.addListener(_refresh);
     _codeController.addListener(_refresh);
     _passwordController.addListener(_refresh);

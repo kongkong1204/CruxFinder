@@ -261,7 +261,7 @@ class _FeedScreenState extends State<FeedScreen> {
                           itemBuilder: (context, index) {
                             final feed = filtered[index];
                             return Padding(
-                              padding: const EdgeInsets.only(bottom: 20),
+                              padding: const EdgeInsets.fromLTRB(0,20,0,20),
                               child: FeedCard(
                                 memo: feed.memo,
                                 dateText: feed.dateText,
